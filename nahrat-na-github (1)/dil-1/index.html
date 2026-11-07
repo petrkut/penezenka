@@ -1,0 +1,546 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><link rel="manifest" href="../manifest.webmanifest"><link rel="apple-touch-icon" href="../apple-touch-icon.png"><meta name="theme-color" content="#22306b"><script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("../sw.js",{scope:"../"}).catch(()=>{}))</script></head><body>
+<title>Peněženka v kostce 1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,700;6..12,800&display=swap">
+<style>
+/* Layout: one board game; home screen with wallet + tile legend, game view = 6x6 board ring with a control centre, bottom sheets for each tile */
+:root{
+  --bg:#f2f4fb; --surface:#ffffff; --ink:#18203a; --muted:#5b6583; --line:#dde2f0;
+  --navy:#22306b; --coin:#f2b630; --coin-ink:#3d2a00; --mint:#1d9b74; --bad:#d2453b; --soft:#e9edfb;
+  --display:"Fredoka","Trebuchet MS",sans-serif;
+  --body:"Nunito Sans","Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1222; --surface:#171d34; --ink:#eef0fa; --muted:#a3abc8; --line:#2a3254;
+  --navy:#9fb0ff; --coin:#f6c454; --coin-ink:#2b1e00; --mint:#47d1a3; --bad:#ff7b70; --soft:#1f2747; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1222; --surface:#171d34; --ink:#eef0fa; --muted:#a3abc8; --line:#2a3254;
+  --navy:#9fb0ff; --coin:#f6c454; --coin-ink:#2b1e00; --mint:#47d1a3; --bad:#ff7b70; --soft:#1f2747; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+.wrap{max-width:760px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:2.2rem;color:var(--navy)} h2{font-size:1.7rem;color:var(--navy)} h3{font-size:1.2rem}
+p{margin:0}
+.lead{color:var(--muted);max-width:60ch}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--coin);outline-offset:2px}
+.btn{background:var(--navy);color:var(--bg);border:none;border-radius:14px;min-height:52px;padding:0 22px;font-weight:800}
+.btn.coin{background:var(--coin);color:var(--coin-ink)}
+.btn.line{background:transparent;color:var(--navy);border:2px solid var(--navy)}
+.btn:disabled{opacity:.45;cursor:default}
+.hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.coinlogo{width:64px;height:64px;border-radius:50%;background:var(--coin);color:var(--coin-ink);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:1.6rem;box-shadow:inset 0 -5px 0 rgba(0,0,0,.15);flex:none}
+.hero > div{flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.tile{background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:18px;text-align:left;display:flex;flex-direction:column;gap:8px;transition:transform .15s,border-color .15s}
+.tile:hover{border-color:var(--navy);transform:translateY(-2px)}
+.tile .ico{font-family:var(--display);font-size:1.6rem;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--soft);color:var(--navy);font-weight:700}
+.tile p{color:var(--muted);font-size:.95rem}
+.best{margin-top:auto;font-size:.85rem;font-weight:800;color:var(--mint)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-block:10px;border-bottom:2px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.back{background:transparent;border:2px solid var(--line);border-radius:12px;min-height:44px;padding:0 14px;font-weight:800}
+.stat{display:flex;flex-direction:column;background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:4px 12px;min-width:92px}
+.stat b{font-family:var(--display);font-size:1.25rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+.stat.good b{color:var(--mint)} .stat.bad b{color:var(--bad)}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.choices{display:flex;flex-direction:column;gap:10px}
+.choice{background:var(--soft);border:2px solid transparent;border-radius:14px;padding:14px 16px;text-align:left;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.choice:hover:not(:disabled){border-color:var(--navy)}
+.choice .cost{font-family:var(--display);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.choice.right{border-color:var(--mint);background:color-mix(in srgb,var(--mint) 14%,var(--surface))}
+.choice.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.choice:disabled{cursor:default}
+.explain{border-left:4px solid var(--coin);padding:6px 0 6px 14px;color:var(--ink)}
+.progress{height:8px;background:var(--soft);border-radius:99px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--coin);transition:width .3s}
+.tag{display:inline-block;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--muted)}
+.lessons{display:flex;flex-direction:column;gap:10px;padding:0;margin:0;list-style:none}
+.lessons li{background:var(--soft);border-radius:12px;padding:10px 14px}
+.lessons li.ok{border-left:5px solid var(--mint)} .lessons li.warn{border-left:5px solid var(--bad)}
+.big{font-family:var(--display);font-size:2.4rem;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
+/* interest race */
+.ctrl{display:flex;flex-direction:column;gap:4px}
+.ctrl label{font-weight:800;display:flex;justify-content:space-between;gap:8px}
+.ctrl output{font-family:var(--display);color:var(--navy);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--navy);min-height:36px}
+.lanes{display:flex;flex-direction:column;gap:14px}
+.lane-head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:800}
+.lane-head span:last-child{font-family:var(--display);font-variant-numeric:tabular-nums}
+.track{height:30px;background:var(--soft);border-radius:10px;overflow:hidden;position:relative}
+.fill{height:100%;border-radius:10px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.paid{position:absolute;inset:0 auto 0 0;border-right:3px dashed var(--ink);opacity:.5;pointer-events:none}
+.small{font-size:.85rem;color:var(--muted)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.row > .ctrl{flex:1;min-width:200px}
+/* unit price */
+.packs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pack{background:var(--soft);border:3px solid transparent;border-radius:18px;padding:18px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.pack:hover:not(:disabled){border-color:var(--navy)}
+.pack .size{font-weight:800;color:var(--muted)}
+.pack .price{font-family:var(--display);font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums}
+.pack .unit{font-size:.9rem;font-weight:800;min-height:1.4em;font-variant-numeric:tabular-nums}
+.pack.right{border-color:var(--mint)} .pack.wrong{border-color:var(--bad)}
+.pack:disabled{cursor:default}
+.box{width:62px;height:76px;border-radius:10px;background:var(--navy);color:var(--bg);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:.85rem;padding:4px;line-height:1.1}
+.foot{color:var(--muted);font-size:.85rem;max-width:65ch}
+/* wallet & rewards */
+.wallet{background:var(--navy);color:var(--bg);border-radius:22px;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.wallet-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.coins{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums}
+.coin-dot{width:30px;height:30px;border-radius:50%;background:var(--coin);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);flex:none}
+.rank{font-weight:800;text-align:right}
+.rank small{display:block;font-weight:400;opacity:.8}
+.wallet .progress{background:color-mix(in srgb,var(--bg) 25%,transparent)}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.badge{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px;font-size:.8rem;color:var(--muted)}
+.badge b{font-family:var(--display);font-size:1rem;color:var(--ink);font-weight:600}
+.badge.on{border-color:var(--coin);background:color-mix(in srgb,var(--coin) 14%,var(--surface))}
+.badge.off b{color:var(--muted)}
+.goal input{font:inherit;min-height:48px;padding:6px 12px;border:2px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);width:100%;box-sizing:border-box}
+.goal label{display:flex;flex-direction:column;gap:4px;font-weight:800;flex:1;min-width:180px}
+.reward{position:fixed;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top,0px));z-index:20;background:var(--coin);color:var(--coin-ink);border-radius:18px;padding:14px 20px;font-weight:800;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px);display:flex;gap:12px;align-items:center}
+.reward .coin-dot{background:var(--surface)}
+@media (prefers-reduced-motion:no-preference){.reward{animation:pop .35s cubic-bezier(.2,1.4,.4,1)}@keyframes pop{from{transform:translate(-50%,20px) scale(.9);opacity:0}}}
+.earned{font-family:var(--display);font-weight:700;color:var(--coin-ink);background:var(--coin);border-radius:99px;padding:4px 14px;align-self:flex-start;font-variant-numeric:tabular-nums}
+/* rat race board */
+.tile.feature{grid-column:1/-1;border-color:var(--coin);background:color-mix(in srgb,var(--coin) 10%,var(--surface))}
+.board{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,minmax(64px,auto));gap:4px;background:var(--navy);padding:4px;border-radius:18px}
+.sq{background:var(--surface);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px 2px;font-size:.66rem;font-weight:800;line-height:1.15;position:relative;min-width:0;overflow-wrap:anywhere;color:var(--muted)}
+.sq .si{font-family:var(--display);font-size:1.15rem;font-weight:700;line-height:1}
+.sq.V{background:var(--coin);color:var(--coin-ink)} .sq.P .si{color:var(--mint)} .sq.L .si{color:var(--bad)} .sq.K .si{color:var(--navy)} .sq.U .si{color:var(--muted)}
+.sq.here{outline:3px solid var(--ink);outline-offset:-3px}
+.token{position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:var(--bad);border:2px solid var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.center{grid-column:2/5;grid-row:2/5;background:var(--surface);border-radius:12px;padding:10px;display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0}
+.center .lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--muted)}
+.free-num{font-family:var(--display);font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.die{font-family:var(--display);font-size:1.6rem;width:46px;height:46px;border-radius:12px;background:var(--soft);display:grid;place-items:center;font-weight:700;flex:none}
+.roll{display:flex;gap:8px;align-items:center}
+.roll .btn{flex:1;min-height:46px;padding:0 10px}
+.sheet-bg{position:fixed;inset:0;background:rgba(10,14,30,.45);z-index:15;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);color:var(--ink);width:100%;max-width:640px;max-height:88vh;overflow:auto;border-radius:22px 22px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .25s ease-out}@keyframes up{from{transform:translateY(40px);opacity:0}}}
+.deal{border:2px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.deal .nums{display:flex;gap:16px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.deal .nums b{font-family:var(--display)}
+.stmt{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.stmt{grid-template-columns:1fr}}
+.stmt table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums}
+.stmt td{padding:5px 0;border-bottom:1px solid var(--line)} .stmt td:last-child{text-align:right;font-weight:800}
+.stmt .tot td{border-bottom:none;padding-top:8px}
+.mini{background:transparent;border:2px solid var(--mint);color:var(--mint);border-radius:8px;font-weight:800;font-size:.75rem;padding:2px 8px;margin-left:6px}
+.log{font-size:.85rem;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:420px){h1{font-size:1.8rem}.big{font-size:2rem}}
+
+/* single-game board (6x6 ring) */
+.board{grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(6,minmax(58px,auto));gap:3px;padding:3px}
+.center{grid-column:2/6;grid-row:2/6;gap:6px}
+.sq{font-size:.62rem;padding:3px 1px}
+.sq .si{font-size:1.05rem}
+.sq.N .si{color:var(--coin-ink)} .sq.N{background:color-mix(in srgb,var(--coin) 22%,var(--surface))}
+.sq.R .si{color:var(--navy)} .sq.B .si{color:var(--mint)}
+.progress.mood i{background:var(--mint)} .progress.mood.low i{background:var(--bad)}
+.legend-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.lt{display:flex;gap:10px;align-items:flex-start}
+.lt .sq{width:44px;height:44px;flex:none;border:2px solid var(--line);border-radius:10px}
+.lt > div{display:flex;flex-direction:column;min-width:0}
+@media (max-width:420px){.sq{font-size:.55rem}.center{padding:6px}.die{width:40px;height:40px;font-size:1.3rem}}
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+const $app=document.getElementById("app");
+const kc=n=>(n<0?"−":"")+Math.round(Math.abs(n)).toLocaleString("cs-CZ")+" Kč";
+function h(tag,a={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(a)){if(k==="class")e.className=v;else if(k==="style")e.style.cssText=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else if(v!==null&&v!==undefined&&v!==false)e.setAttribute(k,v===true?"":v)}for(const c of kids.flat())if(c!=null&&c!==false)e.append(c);return e}
+const store={get(k,d){try{const v=localStorage.getItem("fg-"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("fg-"+k,JSON.stringify(v))}catch(e){}}};
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const rint=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+
+/* ============ ODMĚNY ============ */
+const RANKS=[[0,"Začátečník"],[150,"Šetřílek"],[400,"Rozpočtář"],[800,"Investor"],[1500,"Finanční guru"]];
+const BADGES={
+  start:["První krok","Získej první mince"],free:["Svoboda","Unikni z krysího závodu"],fast:["Raketa","Útěk do 18 měsíců"],
+  nodebt:["Bez dluhu","Unikni a nikdy si nepůjč"],reserve:["Rezervista","Měj hotovost na 3 měsíce výdajů"],
+  eye:["Oko pokladní","5 chytrých nákupů v jedné hře"],oracle:["Věštec","3 správné úrokové hádanky v jedné hře"],
+  scam:["Detektiv","Odhal investiční podvod"],quiz10:["Série deset","10 správných odpovědí za sebou"],k1:["Tisícovka","Celkem 1 000 vydělaných mincí"]};
+const rankOf=e=>{let r=0;RANKS.forEach((x,k)=>{if(e>=x[0])r=k});return r};
+let rewardTimer;
+function award(n,reason,badges=[],silent=false){
+  const before=store.get("earned",0);const earned=before+n;
+  store.set("coins",store.get("coins",0)+n);store.set("earned",earned);
+  const have=new Set(store.get("badges",[]));const fresh=[];
+  for(const b of [n>0?"start":null,...badges,earned>=1000?"k1":null])if(b&&BADGES[b]&&!have.has(b)){have.add(b);fresh.push(b)}
+  store.set("badges",[...have]);
+  const up=rankOf(earned)>rankOf(before);
+  if(silent&&!fresh.length&&!up)return n;
+  document.querySelectorAll(".reward").forEach(x=>x.remove());
+  const el=h("div",{class:"reward",role:"status"},h("div",{class:"coin-dot","aria-hidden":"true"}),
+    h("div",{},n?"+"+n+" mincí · "+reason:"",
+      ...fresh.map(b=>h("div",{style:"font-weight:"+(n?400:800)},"Nový odznak: "+BADGES[b][0])),
+      up?h("div",{style:"font-weight:400"},"Nová hodnost: "+RANKS[rankOf(earned)][1]):null));
+  document.body.append(el);clearTimeout(rewardTimer);rewardTimer=setTimeout(()=>el.remove(),4200);
+  return n;
+}
+const earnedPill=n=>h("div",{class:"earned"},"+"+n+" mincí");
+
+/* ============ DATA ============ */
+const QUIZ=[
+  {"d": 1, "q": "V inzerátu je mzda 40 000 Kč hrubého. Kolik ti přijde na účet?", "o": ["Méně, strhne se pojištění a daň", "Přesně 40 000 Kč, hrubá mzda je to, co dostanu", "Asi 38 000 Kč, strhne se jen daň"], "a": 0, "e": "Hrubá mzda není čistá. Zaměstnavatel z ní strhne sociální a zdravotní pojištění a daň z příjmu. Ze 40 000 Kč hrubého ti přijde zhruba 32 tisíc. Pojištění se platí vždycky, nejen daň."},
+  {"d": 2, "q": "Půjčka 10 000 Kč, splácíš 12× po 1 000 Kč. Kolik přeplatíš?", "o": ["2 000 Kč", "Nic, splátky jen rozloží půjčku na menší části", "1 000 Kč"], "a": 0, "e": "12 × 1 000 = 12 000 Kč, tedy o 2 000 Kč víc, než sis půjčil(a). RPSN takové půjčky vychází přes 40 % ročně. Při srovnání půjček koukej vždy na RPSN a celkovou splatnou částku."},
+  {"d": 1, "q": "Přijde SMS: „Vaše banka: účet bude zablokován, ověřte se na odkazu.“ Co uděláš?", "o": ["Nekliknu a zavolám bance sám", "Kliknu, ale údaje nezadám, jen se podívám, co tam je", "Odpovím na SMS a zeptám se, jestli je pravá"], "a": 0, "e": "Typický phishing. Už odkaz může vést na stránku, která vypadá přesně jako banka, a odpověď podvodníkovi potvrdí, že číslo je aktivní. Banka po tobě přihlašovací údaje přes odkaz v SMS nikdy nechce."},
+  {"d": 2, "q": "Máš doma 100 000 Kč. Ceny rostou o 5 % ročně. Co se stane za 3 roky?", "o": ["Koupíš za ně zhruba tolik, co dnes za 86 000 Kč", "Nic, pořád je to 100 000 Kč, takže stejná hodnota", "Koupíš za ně tolik, co dnes za 95 000 Kč"], "a": 0, "e": "Inflace ukusuje kupní sílu. Číslo na bankovce se nemění, ale koupíš za ni méně, a ztráta se každý rok sčítá: 100 000 ÷ 1,05³ ≈ 86 000 Kč. Proto má smysl rezervu držet aspoň na spořicím účtu."},
+  {"d": 1, "q": "Jak velkou finanční rezervu se obvykle doporučuje mít?", "o": ["3 až 6 měsíčních výdajů", "Jednu výplatu, víc je zbytečné", "Žádnou, v nouzi pomůže kreditka nebo půjčka"], "a": 0, "e": "Rezerva na 3 až 6 měsíců výdajů tě podrží při ztrátě práce, nemoci nebo velké opravě. Kreditka a půjčka nejsou rezerva, jsou to dluhy s úrokem."},
+  {"d": 2, "q": "Potřebuješ 3 kusy. Co je výhodnější: „3 za cenu 2“, nebo „sleva 30 %“?", "o": ["3 za cenu 2, vychází to asi na 33 %", "Sleva 30 %, je to sleva na každý kus", "Je to úplně stejné"], "a": 0, "e": "3 za cenu 2 znamená, že každý kus stojí o třetinu méně, tedy sleva asi 33 %. Ale jen pokud ty tři kusy opravdu spotřebuješ, jinak jsi prostě utratil(a) víc."},
+  {"d": 2, "q": "Kreditní karta má bezúročné období 45 dní. Kdy platíš úrok?", "o": ["Když v tom období nesplatíš celou dlužnou částku", "Když v tom období nezaplatíš aspoň minimální splátku", "Vždycky, úrok se jen strhne později"], "a": 0, "e": "Minimální splátka tě ochrání jen před upomínkou, ne před úrokem. Úrok, často přes 20 % ročně, naskočí, jakmile celý dluh nesplatíš včas. Výběr hotovosti z kreditky bývá úročený hned."},
+  {"d": 1, "q": "Kamarád radí: „Dej všechny úspory do akcií jedné firmy, ta poroste.“", "o": ["Riskantní, lepší je víc různých investic", "Dobrý nápad, když je to velká a známá firma, ta nezkrachuje", "Bezpečné, akcie dlouhodobě vždycky rostou"], "a": 0, "e": "I velké známé firmy krachují nebo roky ztrácejí. Dlouhodobě rostl trh jako celek, ne každá firma. Rozložení peněz (diverzifikace) snižuje riziko, že přijdeš o všechno."},
+  {"d": 2, "q": "Pravidlo 50/30/20 dělí čistý příjem na:", "o": ["50 % nutné výdaje, 30 % přání, 20 % spoření", "50 % nutné výdaje, 30 % spoření, 20 % přání", "50 % spoření, 30 % nutné výdaje, 20 % přání"], "a": 0, "e": "Polovina na nutnosti (bydlení, jídlo, doprava), 30 % na to, co tě těší, a 20 % na spoření nebo splácení dluhů. Je to orientační vodítko, ne zákon."},
+  {"d": 2, "q": "Obchod nabízí: „Kup teď, zaplať za 30 dní, bez navýšení.“ Kde je háček?", "o": ["Pozdní platba je drahá a svádí utrácet", "Žádný, je to vlastně půjčka zdarma, takže se vyplatí vždycky", "Jediný háček je, že zboží pošlou později"], "a": 0, "e": "Odložená platba je bez navýšení, jen když zaplatíš včas. Zpoždění bývá drahé a snadno nakoupíš víc, než si můžeš dovolit, protože peníze z účtu hned neodejdou."},
+  {"d": 1, "q": "Na brigádě ti nabídnou peníze „na ruku, bez smlouvy“. Jaké je riziko?", "o": ["Nemáš jistotu výplaty a při úrazu nejsi chráněn(a)", "Žádné, pro studenty je práce bez smlouvy v pořádku", "Žádné, peníze na ruku jsou vždycky víc"], "a": 0, "e": "Práce bez smlouvy je nelegální i pro studenty. Těžko se domáháš výplaty a při úrazu nejsi chráněn(a). Chtěj aspoň dohodu o provedení práce (DPP) nebo o pracovní činnosti (DPČ)."},
+  {"d": 2, "q": "Neznámý člověk na sociální síti ti nabídne 2 000 Kč, když ti pošle peníze na účet a ty je přepošleš dál.", "o": ["Je to podvod a trestný čin, tzv. bílý koník", "V pořádku, peníze nejsou moje, jen je přepošlu", "Riskuje jen ten, kdo peníze posílá, ne já"], "a": 0, "e": "Přes tvůj účet se perou peníze z podvodů. Odpovědnost nese majitel účtu, tedy ty. Svůj účet ani kartu nikdy nikomu nepůjčuj."},
+  {"d": 1, "q": "Ve hře stojí 1 000 gemů 249 Kč. Proč hry používají vlastní měnu místo korun?", "o": ["Abys méně vnímal(a), kolik skutečných peněz utrácíš", "Protože hry nesmějí ceny uvádět v korunách", "Protože gemy ve velkém balíčku vycházejí levněji"], "a": 0, "e": "Gemy a mince zakrývají skutečnou cenu a balíčky bývají nastavené tak, aby ti vždycky kousek chyběl. Přepočítej si cenu zpátky na koruny."},
+  {"d": 1, "q": "Influencer slibuje „zaručený výnos 20 % měsíčně“ v kryptu. Co to je?", "o": ["Skoro jistě podvod, vysoký výnos nikdy není zaručený", "Riskantní, ale když má tolik sledujících, asi to funguje", "Bezpečné, když tam dám jen malou částku na zkoušku"], "a": 0, "e": "Kdo slibuje vysoký a zároveň jistý výnos, lže. Podvodníci často nechají malou částku „vydělat“, abys pak poslal(a) víc. Počet sledujících nic nedokazuje."},
+  {"d": 2, "q": "Šetříš na řidičák za 20 000 Kč. Už máš 5 000 Kč a chceš ho mít za 10 měsíců. Kolik měsíčně odkládat?", "o": ["1 500 Kč", "2 000 Kč", "2 500 Kč"], "a": 0, "e": "Zbývá naspořit 20 000 − 5 000 = 15 000 Kč. To je 15 000 ÷ 10 = 1 500 Kč měsíčně. Velký cíl rozdělený na malé měsíční částky je najednou zvládnutelný."},
+  {"d": 2, "q": "Operátor nabízí telefon za 1 Kč k tarifu za 699 Kč měsíčně na 24 měsíců. Kolik zaplatíš?", "o": ["16 777 Kč", "1 Kč, telefon je v akci zadarmo", "Kolem 8 400 Kč, tarif platím jen první rok"], "a": 0, "e": "24 × 699 + 1 = 16 777 Kč. Porovnej to s cenou telefonu zvlášť plus levnějším tarifem bez závazku. Často to vyjde levněji."},
+  {"d": 2, "q": "Co je kontokorent?", "o": ["Možnost jít na účtu do minusu, za úrok", "Poplatek, který banka strhne, když máš na účtu málo peněz", "Spořicí účet s vyšším úrokem"], "a": 0, "e": "Kontokorent je půjčka přímo na účtu. Úrok, často kolem 20 % ročně, se počítá z částky v minusu. Je pohodlný, ale drahý."},
+  {"d": 1, "q": "Proč mít úspory na spořicím účtu, a ne na běžném?", "o": ["Spořicí účet víc úročí a peníze jsou pořád rychle dostupné", "Na spořicím účtu jsou peníze zamčené, takže je neutratím", "Není v tom rozdíl, oba úročí stejně"], "a": 0, "e": "Běžný účet slouží k placení a skoro neúročí. Spořicí účet úrokem aspoň zčásti vyrovnává inflaci a peníze z něj dostaneš rychle."},
+  {"d": 2, "q": "Co ukazuje RPSN u půjčky?", "o": ["Všechny roční náklady půjčky, úrok i poplatky", "Jen úrokovou sazbu, poplatky se počítají zvlášť", "Kolik zaplatíš každý měsíc"], "a": 0, "e": "RPSN zahrnuje úrok i poplatky, proto je to nejlepší číslo pro porovnání půjček. Nízký úrok s vysokými poplatky může být dražší než vyšší úrok bez poplatků."},
+  {"d": 1, "q": "Na neznámém e-shopu jsou boty o 70 % levnější než všude jinde. Co uděláš?", "o": ["Ověřím recenze, kontakty a firmu, než zaplatím", "Koupím rychle, akce končí dnes o půlnoci", "Koupím a zaplatím převodem předem, ať to mají rychle"], "a": 0, "e": "Nereálně nízká cena a tlak na rychlé rozhodnutí jsou typické znaky podvodného e-shopu. Hledej IČO, skutečnou adresu a recenze z jiných webů. Platbu kartou jde někdy reklamovat, převod předem skoro nikdy."},
+  {"d": 2, "q": "Co je exekuce?", "o": ["Nucené vymáhání dluhu", "Pokuta od banky za opožděnou splátku úvěru", "Smazání dluhu, když ho nemůžeš splatit"], "a": 0, "e": "Když dluh nesplácíš, věřitel může jít k soudu a exekutor pak strhává část výplaty nebo zabavuje majetek. K dluhu se navíc přidají náklady exekuce. Problémy se splácením řeš včas, třeba v bezplatné dluhové poradně."},
+  {"d": 1, "q": "Máš 3 předplatné po 199 Kč měsíčně. Kolik je to za rok?", "o": ["7 164 Kč", "2 388 Kč", "597 Kč"], "a": 0, "e": "3 × 199 × 12 = 7 164 Kč. Malé měsíční platby nenápadně rostou. Jednou za čas projdi, co opravdu používáš."},
+  {"d": 3, "q": "Proč banky nabízejí studentům účet zdarma?", "o": ["Chtějí si tě udržet i jako dospělého", "Ze zákona musí studentům vést účet úplně zdarma", "Protože na studentech vydělávají nejvíc"], "a": 0, "e": "Banka do tebe investuje teď, aby na tobě vydělala později. Je to v pořádku, jen si hlídej, kdy účet přestane být zdarma, a porovnávej nabídky."},
+  {"d": 2, "q": "Co platí pojištění odpovědnosti?", "o": ["Škodu, kterou způsobíš někomu jinému", "Škodu na tvých vlastních věcech, třeba na mobilu nebo kole", "Tvoje splátky, když nemůžeš splácet"], "a": 0, "e": "Rozbiješ cizí telefon nebo vytopíš sousedy? Zaplatí to pojišťovna. Často stojí jen pár desítek korun měsíčně a bývá součástí pojištění domácnosti."},
+  {"d": 1, "q": "Chtěl(a) jsi utratit 300 Kč za jídlo, u pokladny máš 520 Kč. Co nejvíc pomáhá?", "o": ["Mít seznam a nechodit nakupovat hladový", "Kupovat hlavně věci ve slevě, i když nejsou na seznamu", "Platit kartou, protože to tolik nebolí"], "a": 0, "e": "Seznam a plný žaludek chrání před nákupy navíc. Slevy často lákají koupit věci, které jsi nepotřeboval(a), a s kartou se utrácí snáz než s hotovostí."},
+];
+const BQ=[
+  {"d": 1, "q": "Co je pasivní příjem?", "o": ["Peníze, které chodí i bez denní práce", "Výplata za práci z domova, kde nemusíš nikam chodit", "Peníze, které ti někdo dluží"], "a": 0, "e": "Nájem z bytu, dividendy, výnos z investic nebo e-shopu, který běží sám. Právě pasivní příjem tě dostane z krysího závodu."},
+  {"d": 2, "q": "Ve hře dělíme majetek podle toho, kam tečou peníze. Co je aktivum?", "o": ["Věc, která ti nosí peníze do kapsy", "Cokoli drahého, co vlastníš, třeba auto nebo mobil", "Věc, kterou si koupíš na splátky"], "a": 0, "e": "Aktivum ti peníze přináší (pronájem, akcie). Pasivum ti je bere (auto na splátky, drahé předplatné), i když je drahé a hezké."},
+  {"d": 1, "q": "Nové auto na splátky, kterým jezdíš na výlety, je z pohledu peněz spíš:", "o": ["Pasivum, každý měsíc ti bere peníze", "Aktivum, protože má hodnotu a dá se prodat", "Investice, protože ho budeš mít dlouho"], "a": 0, "e": "Auto ztrácí hodnotu a stojí splátky, pojištění a benzín. Může být užitečné, ale peníze nevydělává."},
+  {"d": 1, "q": "Co je dividenda?", "o": ["Část zisku, kterou firma vyplácí akcionářům", "Úrok, který dostaneš od banky", "Poplatek, který platíš za držení akcií"], "a": 0, "e": "Když vlastníš akcie, firma ti může posílat podíl ze zisku. Není ale zaručená, firma ji může snížit nebo zrušit."},
+  {"d": 2, "q": "Co je ETF?", "o": ["Fond, který kupuje stovky firem najednou", "Spořicí produkt banky s garantovaným výnosem", "Akcie jedné velké firmy"], "a": 0, "e": "ETF ti jedním nákupem rozloží peníze do mnoha firem. Je levné a snižuje riziko jedné firmy, ale výnos zaručený nemá, celý trh může klesnout."},
+  {"d": 2, "q": "Investice 30 000 Kč ti vydělává 1 000 Kč měsíčně. Za jak dlouho se ti vrátí?", "o": ["Za 30 měsíců", "Za 3 roky", "Za 300 měsíců"], "a": 0, "e": "30 000 ÷ 1 000 = 30 měsíců, tedy dva a půl roku. Tomu se říká doba návratnosti. Čím kratší, tím lepší obchod (pokud je reálný)."},
+  {"d": 3, "q": "Investice 24 000 Kč nese 300 Kč měsíčně. Kolik je to ročně v procentech?", "o": ["15 %", "1,25 %", "12 %"], "a": 0, "e": "300 × 12 = 3 600 Kč ročně. 3 600 ÷ 24 000 = 0,15, tedy 15 % ročně. Pozor: 1,25 % je výnos za jeden měsíc, ne za rok."},
+  {"d": 1, "q": "Co je hypotéka?", "o": ["Úvěr na bydlení zajištěný nemovitostí", "Spoření na vlastní bydlení se státní podporou", "Pojištění bytu pro případ požáru"], "a": 0, "e": "Banka ti půjčí na byt a byt slouží jako záruka. Když nesplácíš, může ho prodat. Spoření se státní podporou je stavební spoření, to je něco jiného."},
+  {"d": 3, "q": "Máš víc dluhů. Který je matematicky nejvýhodnější splatit jako první?", "o": ["Ten s nejvyšším úrokem", "Ten s nejvyšší částkou", "Ten s nejnižší měsíční splátkou"], "a": 0, "e": "Nejdražší dluh tě stojí nejvíc peněz každý měsíc, jeho splacením ušetříš nejvíc. U menších dluhů pomáhá i motivace, ale matematicky vyhrává nejvyšší úrok."},
+  {"d": 1, "q": "Co je akcie?", "o": ["Malý podíl ve firmě", "Půjčka firmě, kterou ti vrátí s úrokem", "Poukázka na slevu u firmy"], "a": 0, "e": "S akcií vlastníš kousek firmy. Když se jí daří, roste cena akcie a můžeš dostávat dividendy. Půjčka firmě s úrokem je dluhopis."},
+  {"d": 2, "q": "Co znamená „úrok z úroku“?", "o": ["Úrok se počítá i z dřívějších úroků", "Banka si strhne úrok dvakrát, jednou na začátku a jednou na konci", "Úrok se počítá jen z první vložené částky"], "a": 0, "e": "Složené úročení. Peníze rostou čím dál rychleji, proto je výhoda začít spořit co nejdřív."},
+  {"d": 2, "q": "Kamarád ti chce půjčit peníze na investici. Co je hlavní riziko?", "o": ["Když investice nevyjde, dluh zůstane a musíš ho splatit", "Žádné, když investuju do něčeho bezpečného, třeba ETF", "Jen to, že mu dám část zisku"], "a": 0, "e": "Investovat s půjčenými penězi zvyšuje zisk i ztrátu. I ETF může na čas spadnout o desítky procent. Když obchod nevyjde, přijdeš o investici a ještě dlužíš."},
+  {"d": 1, "q": "Co je rozpočet?", "o": ["Plán, kolik peněz přijde a za co je utratíš", "Přehled, za co jsi už utratil(a)", "Částka, kterou ti banka dovolí utratit"], "a": 0, "e": "Výpis ukazuje minulost, rozpočet plánuje dopředu. Bez plánu se peníze snadno rozkutálí po malých výdajích."},
+  {"d": 2, "q": "Proč je dobré mít víc zdrojů příjmu?", "o": ["Když jeden vypadne, nejsi na nule", "Protože se z každého příjmu zvlášť platí nižší daň", "Protože ti banka dá lepší úrok"], "a": 0, "e": "Jedna výplata je jedno riziko. Víc zdrojů (práce, nájem, investice) tě chrání."},
+  {"d": 1, "q": "Co je burza?", "o": ["Trh, kde se obchoduje s akciemi", "Banka, která půjčuje firmám peníze na rozvoj", "Úřad, který určuje ceny akcií"], "a": 0, "e": "Na burze se potkávají kupující a prodávající. Cenu neurčuje žádný úřad, mění se podle toho, kolik lidí chce koupit nebo prodat."},
+  {"d": 2, "q": "Výplata 28 000 Kč, výdaje 26 000 Kč. Co je tvůj největší problém?", "o": ["Skoro nic nezbývá na spoření a rezervu", "Žádný, dokud jsem v plusu, je to v pořádku", "Musím si vzít půjčku, abych měl(a) rezervu"], "a": 0, "e": "To je krysí závod: pracuješ, ale peníze odtečou. Cesta ven je snížit výdaje a zbylé peníze posílat do rezervy a aktiv, ne si půjčovat."},
+];
+const PRODUCTS=[
+  {n:"Mouka hladká",u:"kg",sizes:[[1,"1 kg"],[2,"2 kg"],[5,"5 kg"]],base:18},
+  {n:"Mléko",u:"l",sizes:[[0.5,"0,5 l"],[1,"1 l"],[1.5,"1,5 l"]],base:26},
+  {n:"Káva mletá",u:"kg",sizes:[[0.25,"250 g"],[0.5,"500 g"],[1,"1 kg"]],base:420},
+  {n:"Prací gel",u:"l",sizes:[[1,"1 l"],[2.5,"2,5 l"],[4,"4 l"]],base:85},
+  {n:"Rýže",u:"kg",sizes:[[0.5,"500 g"],[1,"1 kg"],[2,"2 kg"]],base:44},
+  {n:"Sýr eidam",u:"kg",sizes:[[0.1,"100 g"],[0.25,"250 g"],[0.4,"400 g"]],base:180},
+  {n:"Pomerančový džus",u:"l",sizes:[[0.33,"330 ml"],[1,"1 l"],[2,"2 l"]],base:55},
+  {n:"Těstoviny",u:"kg",sizes:[[0.5,"500 g"],[1,"1 kg"]],base:50},
+];
+function makeRound(){
+  const p=PRODUCTS[Math.floor(Math.random()*PRODUCTS.length)];const [a,b]=shuffle(p.sizes).slice(0,2);
+  // big packs are not always cheaper per unit: randomize which side wins
+  const ua=p.base*(0.8+Math.random()*0.5);let ub=ua*(Math.random()<.5?0.78+Math.random()*0.15:1.07+Math.random()*0.18);
+  const price=(s,u)=>Math.max(5,Math.round(s*u)-(Math.random()<.6?0.1:0));
+  const packs=[{s:a,price:price(a[0],ua)},{s:b,price:price(b[0],ub)}].map(x=>({...x,unit:x.price/x.s[0]}));
+  return {p,packs};
+}
+const DEALS=[
+  {n:"Opravy a prodej starých telefonů",d:"Skupuješ rozbité telefony, opravíš je a prodáš.",cost:6000,inc:600},
+  {n:"Kávový automat ve sportovní hale",d:"Automat koupíš, hala dostane podíl z tržby.",cost:10000,inc:1000},
+  {n:"Malé ETF portfolio",d:"Široce rozložená investice do stovek firem.",cost:15000,inc:1500},
+  {n:"Pronájem garáže",d:"Garáž v centru města, nájemník už čeká.",cost:25000,inc:2600},
+  {n:"Zavedený e-shop s předplatným",d:"Malý obchod se stálými zákazníky je na prodej.",cost:30000,inc:3000},
+  {n:"Fotovoltaika na střeše",d:"Přebytky elektřiny prodáváš do sítě.",cost:45000,inc:4800},
+  {n:"Podíl v rodinné kavárně",d:"Kavárna je zisková už pět let a hledá společníka.",cost:60000,inc:6500},
+  {n:"Garsonka na pronájem",d:"Vlastní podíl k hypotéce, nájem pokryje splátku a ještě zbude.",cost:90000,inc:10000},
+];
+const SCAMS=[
+  {n:"Krypto robot",d:"Zaručených 30 % měsíčně! Místa jsou omezená, rozhodni se do hodiny.",cost:10000,why:"Zaručený vysoký výnos a časový nátlak jsou dva hlavní znaky podvodu."},
+  {n:"Investiční klub Zlatý kruh",d:"Vlož 8 000 Kč a za každého kamaráda, kterého přivedeš, dostaneš 2 000 Kč.",cost:8000,why:"Výdělek z náboru dalších lidí je pyramidová hra. Vydělají jen ti nahoře, ostatní přijdou o vklad."},
+  {n:"Tip na tajnou akcii",d:"Známý šeptá, že firma brzy oznámí objev a akcie vystřelí desetkrát.",cost:12000,why:"Zaručené tipy z doslechu jsou past. Na neověřených tipech se většinou prodělává."},
+];
+const TEMPTS=[
+  {n:"Limitované tenisky",d:"Kamarád je už má a vypadají skvěle.",full:4500},
+  {n:"Telefon na splátky",d:"Nejnovější model za 900 Kč měsíčně na dva roky.",perm:900,debt:21600,pn:"Splátka telefonu"},
+  {n:"Víkend v Alpách s partou",d:"Nebo levnější chata u nás za 1 500 Kč?",full:6000,cheap:1500},
+  {n:"Rozvoz jídla každý den",d:"Vaření tě nebaví a aplikace má zrovna slevu.",full:3500},
+  {n:"Nové herní PC",d:"Starý počítač ještě jede, ale ten nový...",full:8000},
+  {n:"Předplatné všeho",d:"Filmy, hudba, hry a cloud. Každé jen pár stovek.",perm:600,pn:"Předplatné"},
+];
+const EVENTS=[
+  {n:"Rozbité auto",d:"Spojka odešla. Servis chce 6 000 Kč.",c:-6000},
+  {n:"Zubař",d:"Plomba, kterou pojišťovna nehradí: 3 500 Kč.",c:-3500},
+  {n:"Daňový přeplatek",d:"Finanční úřad ti vrací 3 000 Kč.",c:3000},
+  {n:"Pokuta za parkování",d:"Zapomněl(a) jsi zaplatit parkovné: 1 500 Kč.",c:-1500},
+  {n:"Prémie v práci",d:"Projekt se povedl, šéf posílá 5 000 Kč.",c:5000},
+  {n:"Rozbitá pračka",d:"Nová stojí 7 000 Kč.",c:-7000},
+  {n:"Zdražení nájmu",d:"Majitel zvedá nájem o 1 000 Kč měsíčně.",rent:1000},
+  {n:"Povýšení",d:"Dostáváš přidáno 2 000 Kč měsíčně.",sal:2000},
+];
+function kc2(n){return n.toLocaleString("cs-CZ",{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2})+" Kč"}
+
+const RQ=[...QUIZ,...BQ];
+const orderQ=b=>[1,2,3].flatMap(d=>shuffle(b.map((q,i)=>(q.d||2)===d?i:-1).filter(i=>i>=0)));
+EVENTS.push({n:"Voda u souseda",d:"Povolila hadice od myčky a vytopil(a) jsi souseda pod sebou. Oprava stropu stojí 25 000 Kč.",flood:true});
+const BUDGET=[
+  {n:"Jídlo na celý měsíc",d:"Jak budeš jíst? Platí to od teď každý měsíc.",e:"Jídlo bývá místo, kde se dá ušetřit nejvíc bez velké ztráty pohodlí.",o:[
+    {l:"Vařím doma, nosím krabičky",line:["jidlo","Jídlo",3500],mood:-3},{l:"Napůl doma, napůl venku",line:["jidlo","Jídlo",5000],mood:3},{l:"Hlavně rozvoz a restaurace",line:["jidlo","Jídlo",8000],mood:7}]},
+  {n:"Doprava do práce",d:"Jak budeš jezdit? Platí to každý měsíc.",e:"Taxi stojí skoro 7× víc než jízdenka. Malé denní výdaje dělají za rok desítky tisíc.",o:[
+    {l:"Měsíční jízdenka MHD",line:["doprava","Doprava",550],mood:0},{l:"Většinou taxi",line:["doprava","Doprava",3800],mood:4},{l:"Na kole",line:["doprava","Doprava",0],mood:2}]},
+  {n:"Předplatné",d:"Filmy, hudba a hry. Kolik služeb si necháš?",e:"Předplatná jsou nenápadná: každé jen pár stovek, dohromady klidně 10 000 Kč ročně.",o:[
+    {l:"Všechny tři",line:["predplatne","Předplatné",870],mood:3},{l:"Jen jednu",line:["predplatne","Předplatné",290],mood:1},{l:"Žádnou",line:["predplatne","Předplatné",0],mood:-3}]},
+  {n:"Pojištění odpovědnosti",d:"Pojišťovna nabízí pojištění domácnosti a odpovědnosti za 160 Kč měsíčně.",e:"Malá pravidelná platba může chránit před velkou ranou. Pojištění odpovědnosti patří k nejlevnějším a nejužitečnějším.",o:[
+    {l:"Sjednám",line:["pojisteni","Pojištění",160],ins:true,mood:0},{l:"To nepotřebuju",mood:0}]},
+  {n:"Koncert s partou",d:"Kamarádi jdou v sobotu na koncert.",e:"Šetřit neznamená nežít. Dobrý rozpočet počítá i s radostí, jen s rozmyslem.",o:[
+    {l:"Jdu, lístek na stání",c:1400,mood:12},{l:"Jdu jen na afterparty",c:400,mood:6},{l:"Nejdu",c:0,mood:-8}]},
+  {n:"Narozeniny mámy",d:"Za týden má máma narozeniny.",e:"Hodnota dárku není jen v ceně. Čas a snaha často potěší víc.",o:[
+    {l:"Kytka a parfém",c:1600,mood:6},{l:"Upeču dort a přijedu",c:250,mood:8},{l:"Pošlu SMS",c:0,mood:-10}]},
+  {n:"Black Friday",d:"Sluchátka, na která koukáš půl roku, jsou o 30 % levnější: 3 200 Kč.",e:"Sleva je výhodná, jen když věc opravdu chceš a máš na ni. Jinak je to pořád 3 200 Kč pryč.",o:[
+    {l:"Beru",c:3200,mood:7},{l:"Ne, teď ne",c:0,mood:-1}]},
+  {n:"Prasklý displej",d:"Telefon spadl na dlažbu. Co teď?",e:"Za splátky zaplatíš víc než v obchodě, a ještě dva roky. 24 × 900 = 21 600 Kč.",o:[
+    {l:"Oprava displeje",c:2500,mood:0},{l:"Nový telefon, 24 splátek po 900 Kč",debtLine:["Splátka telefonu",900,21600],mood:7},{l:"Používám ho prasklý",c:0,mood:-5}]},
+  {n:"Výprodej 3 za 2",d:"V oblíbeném obchodě: kup 3 kusy a třetí máš zdarma.",e:"Akce 3 za 2 šetří, jen když tři kusy opravdu potřebuješ.",o:[
+    {l:"Beru 3 kusy, i když potřebuju jeden",c:1800,mood:4},{l:"Koupím jen tu jednu bundu",c:900,mood:3},{l:"Nic nepotřebuju",c:0,mood:0}]},
+];
+const fv=(p,r,y)=>{const n=y*12,i=r/12;return i===0?p*n:p*((Math.pow(1+i,n)-1)/i)};
+const TILES="VPKNLVPRUBVPKLNVPURK";
+const TINFO={V:["Kč","Výplata","Mzda plus pasivní příjem minus výdaje. Projdeš rohem a připíše se."],P:["+","Investice","Odpověz správně a uvidíš nabídku. Pozor, některé jsou podvod."],
+  K:["?","Kvíz","Situace ze života: brigáda, půjčky, podvody. Bonus 2 000 Kč."],N:["⚖","Nákup","Které balení je levnější za kilo nebo litr? Chytrý nákup ušetří."],
+  R:["≡","Rozpočet","Jídlo, doprava, předplatné, zábava. Rozhodnutí mění tvoje výdaje."],L:["!","Lákadlo","Tenisky, telefon na splátky... Správná odpověď tě ochrání."],
+  B:["%","Úrok","Hádanka o složeném úročení. Bonus 2 000 Kč."],U:["⚡","Událost","Prémie, zubař, pračka, i vytopený soused."]};
+const POS=[];for(let c=0;c<6;c++)POS.push([0,c]);for(let r=1;r<6;r++)POS.push([r,5]);for(let c=4;c>=0;c--)POS.push([5,c]);for(let r=4;r>=1;r--)POS.push([r,0]);
+
+/* ============ DOMOVSKÁ OBRAZOVKA ============ */
+function walletPanel(){
+  const coins=store.get("coins",0),earned=store.get("earned",0),r=rankOf(earned);
+  const next=RANKS[r+1];const p=next?Math.min(100,(earned-RANKS[r][0])/(next[0]-RANKS[r][0])*100):100;
+  return h("div",{class:"wallet"},
+    h("div",{class:"wallet-top"},h("div",{class:"coins"},h("div",{class:"coin-dot","aria-hidden":"true"}),coins.toLocaleString("cs-CZ")+" mincí"),
+      h("div",{class:"rank"},RANKS[r][1],h("small",{},next?"Do hodnosti "+next[1]+": "+(next[0]-earned)+" mincí":"Nejvyšší hodnost"))),
+    h("div",{class:"progress"},h("i",{style:"width:"+p+"%"})));
+}
+function badgesPanel(){
+  const have=new Set(store.get("badges",[]).filter(b=>BADGES[b]));
+  return h("div",{class:"card"},h("h3",{},"Odznaky "+have.size+" / "+Object.keys(BADGES).length),
+    h("div",{class:"badges"},...Object.entries(BADGES).map(([k,[n,d]])=>h("div",{class:"badge "+(have.has(k)?"on":"off")},h("b",{},(have.has(k)?"★ ":"☆ ")+n),d))));
+}
+function goalPanel(){
+  const g=store.get("goal",null),coins=store.get("coins",0);const box=h("div",{class:"card goal"});
+  if(!g){
+    const t=h("input",{type:"text",id:"goal-text",placeholder:"např. 200 Kč na kino"});
+    const n=h("input",{type:"number",id:"goal-n",min:50,step:50,value:500,inputmode:"numeric"});
+    box.append(h("span",{class:"tag"},"Volitelná odměna"),h("h3",{},"Skutečná odměna za mince"),
+      h("p",{class:"small"},"Motivace navíc: domluvte se s rodičem, kamarádem nebo sami se sebou, co dostanete, když nasbíráte daný počet mincí. Mince jdou získat jen hraním a správnými odpověďmi."),
+      h("div",{class:"row"},h("label",{for:"goal-text"},"Odměna",t),h("label",{for:"goal-n"},"Počet mincí",n)),
+      h("button",{class:"btn coin",onclick:()=>{const text=t.value.trim();const target=Math.max(10,Math.round(+n.value||0));if(!text){t.focus();return}store.set("goal",{text,target});home()}},"Nastavit odměnu"));
+    return box;
+  }
+  const done=coins>=g.target;
+  box.append(h("span",{class:"tag"},"Odměna"),h("h3",{},g.text),
+    h("div",{class:"progress"},h("i",{style:"width:"+Math.min(100,coins/g.target*100)+"%"})),
+    h("p",{},done?"Splněno! Ukaž tuhle obrazovku tomu, kdo odměnu slíbil.":coins+" z "+g.target+" mincí, zbývá "+(g.target-coins)+"."));
+  const actions=h("div",{class:"row"});
+  const confirmRow=(label,fn)=>{actions.replaceChildren(h("span",{style:"font-weight:800"},label),h("button",{class:"btn",onclick:fn},"Ano"),h("button",{class:"btn line",onclick:()=>home()},"Ne"))};
+  if(done)actions.append(h("button",{class:"btn coin",onclick:()=>confirmRow("Odměna předána? Odečte se "+g.target+" mincí.",()=>{store.set("coins",coins-g.target);store.set("goal",null);home()})},"Odměna předána"));
+  actions.append(h("button",{class:"btn line",onclick:()=>confirmRow("Opravdu zrušit tuto odměnu?",()=>{store.set("goal",null);home()})},"Zrušit odměnu"));
+  box.append(actions);return box;
+}
+function home(){
+  const S=store.get("race1",null);const has=S&&!S.won;const best=store.get("zavod1",null);
+  $app.replaceChildren(
+    h("div",{class:"hero"},h("div",{class:"coinlogo","aria-hidden":"true"},"Kč"),
+      h("div",{},h("span",{class:"tag"},"Krysí závod"),h("h1",{},"Peněženka v kostce 1"),
+        h("p",{class:"lead"},"Deskovka o tom, jak přestat jen pracovat od výplaty k výplatě. Správné odpovědi ti otevírají investice, které vydělávají za tebe. Unikneš, až pasivní příjem pokryje všechny výdaje."))),
+    walletPanel(),
+    h("div",{class:"card"},
+      h("button",{class:"btn coin",style:"min-height:60px;font-size:1.15rem",onclick:()=>go("hra")},has?"Pokračovat ve hře":"Začít hru"),
+      has?h("p",{class:"small"},"Rozehraná hra: měsíc "+S.months+", hotovost "+kc(S.cash)+", pasivní příjem "+kc(S.assets.reduce((a,x)=>a+x.inc,0))+"."):null,
+      best!==null?h("p",{class:"best"},"Nejrychlejší útěk: "+best+" měsíců"):null),
+    h("div",{class:"card"},h("h3",{},"Pole na desce"),
+      h("div",{class:"legend-tiles"},...Object.entries(TINFO).map(([k,[i,n,d]])=>h("div",{class:"lt"},h("span",{class:"sq "+k,"aria-hidden":"true"},h("span",{class:"si"},i)),h("div",{},h("b",{},n),h("span",{class:"small"},d))))),
+      h("p",{class:"small"},"Sleduj i náladu. Kdo jen šetří a nic si nedopřeje, vyhoří a utratí víc. Kdo jen utrácí, z krysího závodu neunikne.")),
+    goalPanel(),badgesPanel(),
+    h("p",{class:"foot"},"Částky jsou zjednodušené a výnosy zrychlené, aby se hra dala dohrát za pár minut. Nejde o finanční poradenství. Mince a hra se ukládají jen v tomto zařízení."));
+}
+function route(){closeSheet();window.scrollTo(0,0);if(location.hash==="#hra")gameRace();else home()}
+window.addEventListener("hashchange",route);
+function go(k){if(location.hash.slice(1)===k)route();else location.hash=k}
+function bar(stats){return h("div",{class:"bar"},h("button",{class:"back",onclick:()=>go("")},"← Domů"),...stats)}
+function stat(label,val,cls=""){return h("div",{class:"stat "+cls},h("span",{},label),h("b",{},val))}
+
+/* ============ KRYSÍ ZÁVOD ============ */
+function newRace(){return{pos:0,cash:6000,salary:28000,
+  exp:[{n:"Nájem a energie",amt:10000,id:"najem"},{n:"Jídlo",amt:4000,id:"jidlo"},{n:"Splátka auta",amt:3000,debt:36000,id:"auto"},{n:"Telefon a ostatní",amt:1000,id:"ost"}],
+  assets:[],months:0,rolls:0,ok:0,bad:0,coins:0,qo:orderQ(RQ),qi:0,mood:60,insured:false,streak:0,buysOk:0,buys:0,bankOk:0,scams:0,everDebt:false,burn:0,
+  log:["Start. Výplata 28 000 Kč, výdaje 18 000 Kč. Cíl: pasivní příjem vyšší než výdaje."],die:null}}
+function gameRace(){
+  let S=store.get("race1",null);if(!S||S.won){S=newRace();store.set("race1",S)}
+  const passive=()=>S.assets.reduce((a,x)=>a+x.inc,0);
+  const expenses=()=>S.exp.reduce((a,x)=>a+x.amt,0);
+  const save=()=>store.set("race1",S);
+  const log=t=>{S.log.unshift(t);S.log=S.log.slice(0,6)};
+  const mood=d=>{S.mood=Math.max(0,Math.min(100,S.mood+d))};
+  let busy=false,burned=false;
+  const head=h("div"),boardBox=h("div"),stmtBox=h("div"),logBox=h("div");
+  $app.replaceChildren(head,h("div",{class:"card",style:"padding:10px"},boardBox),stmtBox,logBox);
+  function draw(){
+    head.replaceChildren(bar([stat("Hotovost",kc(S.cash),S.cash<3000?"bad":""),stat("Měsíc",String(S.months)),stat("Mince",String(S.coins),"good")]));
+    const pas=passive(),ex=expenses(),pct=Math.min(100,pas/ex*100);
+    const cells=TILES.split("").map((t,k)=>h("div",{class:"sq "+t+(k===S.pos?" here":""),style:"grid-row:"+(POS[k][0]+1)+";grid-column:"+(POS[k][1]+1)},
+      h("span",{class:"si","aria-hidden":"true"},TINFO[t][0]),TINFO[t][1],k===S.pos?h("span",{class:"token","aria-label":"Tvoje figurka"}):null));
+    const rollBtn=h("button",{class:"btn coin",id:"roll",onclick:roll,disabled:busy||null},"Hodit kostkou");
+    boardBox.replaceChildren(h("div",{class:"board"},...cells,h("div",{class:"center"},
+      h("div",{class:"lbl"},"Cesta ke svobodě"),h("div",{class:"progress"},h("i",{style:"width:"+pct+"%"})),
+      h("div",{class:"free-num"},kc(pas)+" / "+kc(ex)),h("div",{class:"small",style:"font-size:.72rem"},"pasivní příjem / výdaje"),
+      h("div",{class:"lbl"},"Nálada "+S.mood+" %"),h("div",{class:"progress mood"+(S.mood<30?" low":"")},h("i",{style:"width:"+S.mood+"%"})),
+      h("div",{class:"roll"},h("div",{class:"die","aria-live":"polite"},S.die?String(S.die):"–"),rollBtn))));
+    const row=(a,b,extra)=>h("tr",{},h("td",{},a,extra||null),h("td",{},b));
+    stmtBox.replaceChildren(h("div",{class:"card"},h("h3",{},"Tvoje finance"),h("div",{class:"stmt"},
+      h("table",{},h("tbody",{},row("Mzda",kc(S.salary)),...S.assets.map(x=>row(x.n,"+"+kc(x.inc))),h("tr",{class:"tot"},h("td",{},"Pasivní příjem"),h("td",{style:"color:var(--mint)"},kc(pas))))),
+      h("table",{},h("tbody",{},...S.exp.map(x=>row(x.n,kc(x.amt),x.debt?h("button",{class:"mini",disabled:(S.cash<x.debt||busy)||null,title:"Zbývá doplatit "+kc(x.debt),onclick:()=>payOff(x.id)},"Splatit "+kc(x.debt)):null)),h("tr",{class:"tot"},h("td",{},"Výdaje celkem"),h("td",{style:"color:var(--bad)"},kc(ex)))))),
+      h("p",{},"Každou výplatu ti zbude ",h("b",{},kc(S.salary+pas-ex)),". Splacením dluhu snížíš výdaje, nákupem investic zvýšíš pasivní příjem."),
+      h("div",{class:"row"},h("button",{class:"btn line",style:"min-height:44px",onclick:restart},"Nová hra"))));
+    logBox.replaceChildren(h("div",{class:"card"},h("h3",{},"Deník"),h("div",{class:"log"},...S.log.map(t=>h("div",{},t)))));
+  }
+  function restart(){openSheet(h("h2",{},"Začít znovu?"),h("p",{},"Současná hra se smaže. Mince, které už máš, ti zůstanou."),
+    h("div",{class:"row"},h("button",{class:"btn",onclick:()=>{closeSheet();S=newRace();save();draw()}},"Ano, nová hra"),h("button",{class:"btn line",onclick:closeSheet},"Ne")))}
+  function payOff(id){const x=S.exp.find(e=>e.id===id);if(!x||S.cash<x.debt)return;S.cash-=x.debt;S.exp=S.exp.filter(e=>e!==x);log("Splaceno: "+x.n+". Výdaje klesly o "+kc(x.amt)+" měsíčně.");save();if(!checkWin())draw()}
+  function setLine(id,n,amt){const x=S.exp.find(e=>e.id===id);if(x){if(amt>0)x.amt=amt;else S.exp=S.exp.filter(e=>e!==x)}else if(amt>0)S.exp.push({n,amt,id})}
+  function cover(){if(S.cash>=0)return;const loan=Math.ceil(-S.cash/1000)*1000;S.cash+=loan;S.everDebt=true;S.exp.push({n:"Splátka půjčky",amt:loan/10,debt:loan,id:"p"+Date.now()+rint(0,999)});log("Nemáš na to. Půjčka "+kc(loan)+", splátka "+kc(loan/10)+" měsíčně.")}
+  function payday(){S.months++;mood(-3);const net=S.salary+passive()-expenses();S.cash+=net;log("Výplata: "+(net>=0?"+":"")+kc(net)+" (měsíc "+S.months+").");
+    if(S.mood<20){S.cash-=4000;S.mood=45;S.burn++;burned=true;log("Vyhoření: z frustrace jsi utratil(a) 4 000 Kč.")}
+    cover();if(S.cash>=3*expenses())award(0,"",["reserve"],true)}
+  function roll(){
+    if(busy)return;busy=true;S.rolls++;const d=1+Math.floor(Math.random()*6);S.die=d;let left=d;draw();
+    const fast=matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const step=()=>{S.pos=(S.pos+1)%TILES.length;if(TILES[S.pos]==="V")payday();left--;draw();
+      if(left>0)setTimeout(step,fast?0:220);else setTimeout(afterMove,fast?0:240)};
+    setTimeout(step,fast?0:180);
+  }
+  function afterMove(){if(burned){burned=false;openSheet(h("span",{class:"tag"},"Pozor"),h("h2",{},"Vyhoření"),h("p",{},"Dlouho sis nic nedopřál(a) a nálada spadla na dno. V návalu frustrace jsi utratil(a) 4 000 Kč za věci, které nepotřebuješ."),
+    h("p",{class:"explain"},"Rozpočet, ve kterém není místo pro radost, dlouho nevydrží. Plánuj si i malé odměny."),h("button",{class:"btn",onclick:()=>{closeSheet();land()}},"Pokračovat"))}else land()}
+  function done(){busy=false;save();if(!checkWin())draw()}
+  function answered(ok){if(ok){S.ok++;S.streak++;S.coins+=3;award(3,"Krysí závod",[S.streak>=10?"quiz10":null],true)}else{S.bad++;S.streak=0}}
+  function nextQ(){if(!S.qo||S.qi>=S.qo.length||S.qo.length!==RQ.length||RQ[S.qo[S.qi]]===undefined){S.qo=orderQ(RQ);S.qi=0}const q=RQ[S.qo[S.qi++]];const idx=shuffle(q.o.map((_,k)=>k));return{...q,o:idx.map(k=>q.o[k]),a:idx.indexOf(q.a)}}
+  function choiceSheet(tag,intro,question,opts,correct,explain,onRes){
+    const fb=h("div",{style:"display:flex;flex-direction:column;gap:10px"});
+    const btns=opts.map((t,k)=>h("button",{class:"choice",onclick:()=>{
+      btns.forEach((b,j)=>{b.disabled=true;if(j===correct)b.classList.add("right");else if(j===k)b.classList.add("wrong")});
+      const ok=k===correct;answered(ok);
+      fb.replaceChildren(h("div",{class:"explain"},h("b",{},ok?"Správně. ":"Vedle. "),explain),h("button",{class:"btn",onclick:()=>onRes(ok)},"Pokračovat"));
+      fb.scrollIntoView({block:"nearest"});
+    }},h("span",{},t)));
+    openSheet(h("span",{class:"tag"},tag),...intro,h("h3",{},question),h("div",{class:"choices"},...btns),fb);
+  }
+  function ask(tag,intro,onRes){const q=nextQ();choiceSheet(tag,intro,q.q,q.o,q.a,q.e,onRes)}
+  function result(tag,text,extra){openSheet(h("span",{class:"tag"},tag),h("p",{},text),extra||null,h("button",{class:"btn",onclick:()=>{closeSheet();done()}},"Pokračovat"))}
+  function land(){
+    const t=TILES[S.pos];
+    if(t==="V"){done();return}
+    if(t==="K")return ask("Kvíz",[h("p",{},"Správná odpověď = bonus 2 000 Kč.")],ok=>{if(ok){S.cash+=2000;log("Kvíz: +2 000 Kč.")}else log("Kvíz: bez bonusu.");closeSheet();done()});
+    if(t==="N")return shop();
+    if(t==="R")return budget();
+    if(t==="B")return bank();
+    if(t==="U"){const e=EVENTS[Math.floor(Math.random()*EVENTS.length)];let extra=null;
+      if(e.flood){const cost=S.insured?1000:25000;S.cash-=cost;cover();extra=h("p",{class:"explain"},S.insured?"Máš pojištění odpovědnosti. Pojišťovna zaplatí škodu, ty jen spoluúčast 1 000 Kč.":"Bez pojištění platíš celou škodu sám (sama). Pojištění odpovědnosti by stálo 160 Kč měsíčně.")}
+      if(e.c){S.cash+=e.c;cover()}if(e.rent){S.exp.find(x=>x.id==="najem").amt+=e.rent}if(e.sal)S.salary+=e.sal;
+      if(e.c>0)mood(4);if(e.c<0||e.flood)mood(-3);
+      log("Událost: "+e.n+".");
+      if(!extra&&S.exp.some(x=>x.n==="Splátka půjčky")&&e.c<0)extra=h("p",{class:"small"},"Bez rezervy tě nečekané výdaje ženou do dluhů. Proto se vyplatí mít hotovost stranou.");
+      return result("Nečekaná událost",e.n+". "+e.d,extra)}
+    if(t==="L"){const m=TEMPTS[Math.floor(Math.random()*TEMPTS.length)];
+      const stake=m.perm?"+"+kc(m.perm)+" k výdajům každý měsíc":kc(m.full);
+      return ask("Lákadlo",[h("h2",{},m.n),h("p",{},m.d),h("p",{class:"explain"},"Odpověz správně a odoláš"+(m.cheap?" (zaplatíš jen levnější variantu "+kc(m.cheap)+")":"")+". Špatně: "+stake+".")],ok=>{
+        closeSheet();
+        if(ok){if(m.cheap){S.cash-=m.cheap;cover();mood(4)}else mood(-2);log("Lákadlo "+m.n+": odolal(a) jsi.")}
+        else{mood(6);if(m.perm){S.exp.push({n:m.pn,amt:m.perm,debt:m.debt,id:"t"+Date.now()});if(m.debt)S.everDebt=true}else{S.cash-=m.full;cover()}log("Lákadlo "+m.n+": "+stake+".")}
+        done()})}
+    if(t==="P")return opportunity();
+  }
+  function shop(){
+    const cur=makeRound();const best=cur.packs[0].unit<cur.packs[1].unit?0:1;S.buys++;const fb=h("div",{style:"display:flex;flex-direction:column;gap:10px"});
+    const btns=cur.packs.map((pk,k)=>h("button",{class:"pack",onclick:()=>{
+      btns.forEach((x,j)=>{x.disabled=true;x.querySelector(".unit").textContent=kc2(cur.packs[j].unit)+" / "+cur.p.u;if(j===best)x.classList.add("right");else if(j===k)x.classList.add("wrong")});
+      const ok=k===best;answered(ok);
+      if(ok){S.buysOk++;S.cash+=800;log("Nákup: chytrá volba, ušetřeno 800 Kč.");if(S.buysOk>=5)award(0,"",["eye"],true)}else{S.cash-=400;cover();log("Nákup: dražší balení, −400 Kč.")}
+      const diff=Math.abs(cur.packs[0].unit-cur.packs[1].unit)/Math.max(cur.packs[0].unit,cur.packs[1].unit)*100;
+      fb.replaceChildren(h("p",{class:"explain"},h("b",{},ok?"Správně, ušetřeno 800 Kč. ":"Vedle, za měsíc to dělá 400 Kč navíc. "),(best===0?"Levá":"Pravá")+" nabídka je za "+cur.p.u+" levnější o "+Math.round(diff)+" %."+(cur.packs[best].s[0]<cur.packs[1-best].s[0]?" Tentokrát vyhrálo menší balení!":"")+" Na cenovce malým písmem bývá cena za 1 kg nebo 1 l."),
+        h("button",{class:"btn",onclick:()=>{closeSheet();done()}},"Pokračovat"));
+    }},h("div",{class:"box","aria-hidden":"true"},pk.s[1]),h("div",{class:"size"},pk.s[1]),h("div",{class:"price"},kc2(pk.price)),h("div",{class:"unit"})));
+    openSheet(h("span",{class:"tag"},"Nákup"),h("h2",{},cur.p.n),h("p",{},"Které balení je levnější za "+cur.p.u+"? Chytrý nákup ušetří 800 Kč, dražší stojí 400 Kč."),h("div",{class:"packs"},...btns),fb);
+  }
+  function budget(){
+    const b=BUDGET[Math.floor(Math.random()*BUDGET.length)];
+    const label=o=>o.line?(o.line[2]?kc(o.line[2])+" / měsíc":"0 Kč / měsíc"):o.debtLine?kc(o.debtLine[1])+" / měsíc":o.c?"− "+kc(o.c):"0 Kč";
+    openSheet(h("span",{class:"tag"},"Rozpočet"),h("h2",{},b.n),h("p",{},b.d),
+      h("div",{class:"choices"},...b.o.map(o=>h("button",{class:"choice",onclick:()=>{
+        if(o.c){S.cash-=o.c;cover()}
+        if(o.line)setLine(...o.line);
+        if(o.debtLine){S.exp.push({n:o.debtLine[0],amt:o.debtLine[1],debt:o.debtLine[2],id:"d"+Date.now()});S.everDebt=true}
+        if(o.ins)S.insured=true;mood(o.mood||0);log("Rozpočet, "+b.n+": "+o.l+".");
+        openSheet(h("span",{class:"tag"},"Rozpočet"),h("h2",{},o.l),h("p",{},"Nálada "+(o.mood>0?"+":"")+(o.mood||0)+" %, teď "+S.mood+" %."+(o.line||o.debtLine?" Měsíční výdaje jsou teď "+kc(expenses())+".":"")),
+          h("p",{class:"explain"},b.e),h("button",{class:"btn",onclick:()=>{closeSheet();done()}},"Pokračovat"));
+      }},h("span",{},o.l),h("span",{class:"cost"},label(o))))));
+  }
+  function bank(){
+    const pm=[1000,2000,3000,5000][rint(0,3)],yrs=[10,20,30][rint(0,2)],fund=Math.random()<.6,r=fund?.07:.03;
+    const val=fv(pm,r,yrs),paid=pm*12*yrs,rnd=x=>Math.round(x/1000)*1000;
+    const opts=shuffle([[rnd(paid),false],[rnd(val),true],[rnd(val*1.9),false]]);const correct=opts.findIndex(x=>x[1]);
+    choiceSheet("Úrok",[h("p",{},"Správná odpověď = bonus 2 000 Kč.")],
+      "Spoříš "+kc(pm)+" měsíčně "+(fund?"do akciového fondu s průměrným výnosem 7 % ročně":"na spořicí účet s úrokem 3 % ročně")+". Kolik budeš mít za "+yrs+" let?",
+      opts.map(x=>kc(x[0])),correct,
+      "Vložíš "+kc(paid)+" a úroky přidají "+kc(val-paid)+". Celkem "+kc(val)+"."+(fund?" Pozor, 7 % je dlouhodobý průměr, akcie v některých letech i hodně klesají.":" Spořicí účet je bezpečný, ale roste pomaleji.")+(yrs>=20?" Čím déle peníze necháš růst, tím víc pracuje úrok z úroku.":""),
+      ok=>{if(ok){S.cash+=2000;S.bankOk++;log("Úrok: správně, +2 000 Kč.");if(S.bankOk>=3)award(0,"",["oracle"],true)}else log("Úrok: bez bonusu.");closeSheet();done()});
+  }
+  function opportunity(){
+    ask("Investice",[h("p",{},"Než do něčeho vložíš peníze, musíš tomu rozumět. Odpověz správně a uvidíš nabídku.")],ok=>{
+      if(!ok){closeSheet();log("Příležitost ti utekla.");return result("Investice","Než jsi pochopil(a), o co jde, obchod koupil někdo jiný.")}
+      if(Math.random()<.22){const sc=SCAMS[Math.floor(Math.random()*SCAMS.length)];const cost=Math.min(sc.cost,Math.max(S.cash,1000));
+        openSheet(h("span",{class:"tag"},"Nabídka"),h("div",{class:"deal"},h("h3",{},sc.n),h("p",{},sc.d),h("div",{class:"nums"},h("span",{},"Vklad ",h("b",{},kc(cost))))),
+          h("div",{class:"row"},
+            h("button",{class:"btn coin",disabled:S.cash<cost||null,onclick:()=>{S.cash-=cost;log("Podvod "+sc.n+": −"+kc(cost)+".");closeSheet();result("Byl to podvod","Peníze jsou pryč. "+sc.why)}},"Investovat"),
+            h("button",{class:"btn line",onclick:()=>{S.coins+=5;S.scams++;award(5,"Odhalený podvod",["scam"],true);log("Odhalen podvod: "+sc.n+".");closeSheet();result("Dobrý instinkt","Byl to podvod. "+sc.why+" Bonus 5 mincí.")}},"Nechci")));
+        return}
+      const aff=DEALS.filter(x=>x.cost<=S.cash);const pick=aff.length?aff[Math.max(0,aff.length-1-Math.floor(Math.random()*2))]:DEALS[Math.floor(Math.random()*3)];
+      const can=S.cash>=pick.cost;
+      openSheet(h("span",{class:"tag"},"Nabídka"),h("div",{class:"deal"},h("h3",{},pick.n),h("p",{},pick.d),
+          h("div",{class:"nums"},h("span",{},"Cena ",h("b",{},kc(pick.cost))),h("span",{},"Příjem ",h("b",{style:"color:var(--mint)"},"+"+kc(pick.inc)+" měsíčně")),h("span",{},"Návratnost ",h("b",{},Math.round(pick.cost/pick.inc)+" měsíců")))),
+        can?null:h("p",{class:"explain"},"Na tohle zatím nemáš. Šetři hotovost na další příležitost."),
+        h("div",{class:"row"},
+          h("button",{class:"btn coin",disabled:!can||null,onclick:()=>{S.cash-=pick.cost;S.assets.push({n:pick.n,inc:pick.inc});mood(5);log("Koupeno: "+pick.n+" (+"+kc(pick.inc)+" měsíčně).");closeSheet();done()}},"Koupit"),
+          h("button",{class:"btn line",onclick:()=>{closeSheet();log("Nabídku jsi nechal(a) být.");done()}},can?"Nechat být":"Zavřít")));
+    });
+  }
+  function checkWin(){
+    if(passive()<expenses())return false;
+    S.won=true;save();
+    const m=S.months;const prev=store.get("zavod1",null);const rec=prev===null||m<prev;if(rec)store.set("zavod1",m);
+    const got=award(100,"Útěk z krysího závodu",["free",m<=18?"fast":null,!S.everDebt?"nodebt":null]);
+    const L=[["ok","Aktiva, která vlastníš: "+S.assets.map(a=>a.n).join(", ")+"."],
+      [S.exp.some(x=>x.debt)?"warn":"ok",S.exp.some(x=>x.debt)?"Pořád máš dluhy. Jejich splacení by ti snížilo výdaje a útěk zrychlilo.":"Žádné dluhy. Splacené závazky snížily výdaje, které musel pasivní příjem pokrýt."],
+      ["","Otázky: správně "+S.ok+" z "+(S.ok+S.bad)+". Chytré nákupy "+S.buysOk+" z "+S.buys+". Úrokové hádanky "+S.bankOk+"."+(S.scams?" Odhalené podvody: "+S.scams+".":"")],
+      S.burn?["warn","Vyhořel(a) jsi "+S.burn+"×. Rozpočet bez radosti dlouho nevydrží."]:["ok","Ani jednou jsi nevyhořel(a). Držel(a) jsi rovnováhu mezi šetřením a radostí."],
+      ["","Ve skutečném životě to trvá roky, ne měsíce. Ale začít se dá klidně už s první brigádou."]];
+    $app.replaceChildren(bar([stat("Měsíců",String(m)),stat("Správně",S.ok+" / "+(S.ok+S.bad),"good")]),
+      h("div",{class:"card"},h("span",{class:"tag"},"Svoboda"),h("h2",{},"Unikl(a) jsi z krysího závodu!"),
+        h("p",{},"Tvůj pasivní příjem "+kc(passive())+" pokrývá všechny výdaje "+kc(expenses())+". Práce je teď volba, ne nutnost."),
+        h("div",{class:"big"},m+" měsíců"),earnedPill(got+S.coins),rec?h("p",{class:"best"},"Nový osobní rekord!"):null,
+        h("ul",{class:"lessons"},...L.map(([c,t])=>h("li",{class:c},t))),
+        h("div",{class:"row"},h("button",{class:"btn coin",onclick:()=>{S=newRace();save();gameRace()}},"Hrát znovu"),h("button",{class:"btn line",onclick:()=>go("")},"Domů"))));
+    window.scrollTo(0,0);return true;
+  }
+  draw();
+}
+let sheetEl=null;
+function openSheet(...kids){closeSheet();const sh=h("div",{class:"sheet",role:"dialog","aria-modal":"true"},...kids);sheetEl=h("div",{class:"sheet-bg"},sh);document.body.append(sheetEl);const f=sh.querySelector("button");if(f)f.focus({preventScroll:true})}
+function closeSheet(){if(sheetEl){sheetEl.remove();sheetEl=null}}
+route();
+</script>
+
+</body></html>

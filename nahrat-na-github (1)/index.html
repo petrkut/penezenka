@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Peněženka v kostce</title>
+<meta name="description" content="Hry o penězích a finanční nezávislosti pro teenagery. Zdarma, bez registrace, rovnou v prohlížeči.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,700;6..12,800&display=swap">
+<style>
+:root{
+  --bg:#f2f4fb; --surface:#ffffff; --ink:#18203a; --muted:#5b6583; --line:#dde2f0;
+  --navy:#22306b; --coin:#f2b630; --coin-ink:#3d2a00; --mint:#1d9b74; --soft:#e9edfb;
+  --display:"Fredoka","Trebuchet MS",sans-serif;
+  --body:"Nunito Sans","Segoe UI",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1222; --surface:#171d34; --ink:#eef0fa; --muted:#a3abc8; --line:#2a3254;
+  --navy:#9fb0ff; --coin:#f6c454; --coin-ink:#2b1e00; --mint:#47d1a3; --soft:#1f2747; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1222; --surface:#171d34; --ink:#eef0fa; --muted:#a3abc8; --line:#2a3254;
+  --navy:#9fb0ff; --coin:#f6c454; --coin-ink:#2b1e00; --mint:#47d1a3; --soft:#1f2747; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55}
+.wrap{max-width:860px;margin:0 auto;padding:40px 16px 56px;display:flex;flex-direction:column;gap:32px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:clamp(2.2rem,7vw,3.2rem);color:var(--navy)}
+h2{font-size:1.5rem;color:var(--navy)}
+h3{font-size:1.35rem}
+p{margin:0}
+.hero{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.coin{width:84px;height:84px;border-radius:50%;background:var(--coin);color:var(--coin-ink);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:2rem;box-shadow:inset 0 -6px 0 rgba(0,0,0,.15);flex:none}
+.hero>div:not(.coin){flex:1;min-width:280px;display:flex;flex-direction:column;gap:10px}
+.lead{color:var(--muted);font-size:1.1rem;max-width:56ch}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:var(--soft);color:var(--navy);border-radius:99px;padding:4px 12px;font-weight:800;font-size:.85rem}
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.game{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:22px;display:flex;flex-direction:column;gap:12px;text-decoration:none;color:inherit;transition:transform .15s,border-color .15s}
+a.game:hover{border-color:var(--navy);transform:translateY(-3px)}
+a.game:focus-visible{outline:3px solid var(--coin);outline-offset:3px}
+.num{font-family:var(--display);font-weight:700;font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.game p{color:var(--muted);font-size:.97rem}
+.game ul{margin:0;padding-left:1.1em;color:var(--ink);font-size:.95rem;display:flex;flex-direction:column;gap:2px}
+.play{margin-top:auto;align-self:flex-start;background:var(--navy);color:var(--bg);border-radius:14px;padding:12px 20px;font-weight:800}
+.game.soon{border-style:dashed;background:transparent}
+.game.soon .play{background:var(--soft);color:var(--muted)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.step{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:4px}
+.step b{font-family:var(--display);font-size:1.1rem}
+.step span{color:var(--muted);font-size:.95rem}
+.note{background:var(--surface);border:2px solid var(--line);border-left:6px solid var(--coin);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;font-size:.95rem}
+footer{color:var(--muted);font-size:.85rem;border-top:2px solid var(--line);padding-top:18px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#22306b"><script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{scope:"./"}).catch(()=>{}))</script></head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <div class="coin" aria-hidden="true">Kč</div>
+    <div>
+      <h1>Peněženka v kostce</h1>
+      <p class="lead">Hry o penězích pro teenagery. Naučíš se hospodařit, nenaletět podvodníkům a nechat peníze pracovat. Všechno na zkoušku, bez skutečných peněz.</p>
+      <div class="chips"><span class="chip">Zdarma</span><span class="chip">Bez registrace</span><span class="chip">Funguje v mobilu</span></div>
+    </div>
+  </header>
+
+  <section class="games" aria-label="Díly">
+    <a class="game" href="dil-1/">
+      <span class="num">Díl 1</span>
+      <h3>Krysí závod</h3>
+      <p>Desková hra o tom, jak vyjít s výplatou a dostat se z kolotoče „vydělám, utratím“.</p>
+      <ul><li>rozpočet a rezerva</li><li>úroky, půjčky a RPSN</li><li>chytré nákupy a podvody</li></ul>
+      <span class="play">Hrát díl 1</span>
+    </a>
+    <a class="game" href="dil-2/">
+      <span class="num">Díl 2</span>
+      <h3>Burza</h3>
+      <p>Pět let na burze za pár minut. Porazíš index, nebo tě srazí krach a bublina?</p>
+      <ul><li>akcie, ETF a dividendy</li><li>poplatky a diverzifikace</li><li>proč je páka nebezpečná</li></ul>
+      <span class="play">Hrát díl 2</span>
+    </a>
+    <div class="game soon" aria-disabled="true">
+      <span class="num">Díl 3</span>
+      <h3>Moje bydlení</h3>
+      <p>Odstěhovat se od rodičů, nájem, nebo vlastní byt na hypotéku?</p>
+      <ul><li>nájem a kauce</li><li>hypotéka a fixace</li><li>kolik ze mzdy unesu</li></ul>
+      <span class="play">Připravujeme</span>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <h2>Jak hrát</h2>
+    <div class="steps">
+      <div class="step"><b>1. Začni dílem 1</b><span>Každý další díl staví na tom předchozím a je o kousek složitější.</span></div>
+      <div class="step"><b>2. Čti vysvětlení</b><span>U každé otázky se dozvíš, proč je odpověď správná. Chyba je tady nejlevnější učitel.</span></div>
+      <div class="step"><b>3. Hraj znovu</b><span>Otázky i události se pokaždé zamíchají, takže žádná hra není stejná.</span></div>
+    </div>
+  </section>
+
+  <section class="note">
+    <b>Pro učitele a rodiče</b>
+    <p>Hry pokrývají témata finanční gramotnosti ze školních osnov: hospodaření domácnosti, úvěry, spoření, investování a ochranu před podvody. Hodí se na hodinu, do suplování i domů. Jeden díl zabere zhruba 20 až 40 minut.</p>
+  </section>
+
+  <footer>
+    <p>Postup ve hře se ukládá jen ve tvém prohlížeči. Na jiném zařízení začínáš znovu. Hry slouží k učení a nic v nich není investiční ani finanční poradenství. Firmy ve hrách jsou smyšlené.</p>
+  </footer>
+</main>
+</body>
+</html>

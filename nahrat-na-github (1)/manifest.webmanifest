@@ -1,0 +1,2 @@
+{"name":"Peněženka v kostce","short_name":"Peněženka","description":"Hry o penězích pro teenagery: Krysí závod, burza a další díly.","lang":"cs","start_url":"./","scope":"./","display":"standalone","orientation":"portrait","background_color":"#f2f4fb","theme_color":"#22306b",
+"icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}]}

@@ -1,0 +1,777 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><link rel="manifest" href="../manifest.webmanifest"><link rel="apple-touch-icon" href="../apple-touch-icon.png"><meta name="theme-color" content="#22306b"><script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("../sw.js",{scope:"../"}).catch(()=>{}))</script></head><body>
+<title>Peněženka v kostce 2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,700;6..12,800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: trading desk — sticky ticker bar with portfolio vs index, three tabs (Trh / Portfolio / Zprávy), bottom sheet for trades */
+:root{
+  --bg:#eef1f8; --surface:#ffffff; --ink:#151b31; --muted:#5a6482; --line:#d9dfee;
+  --navy:#22306b; --coin:#f2b630; --coin-ink:#3d2a00; --up:#14895f; --down:#cf3b33; --soft:#e7ebf8;
+  --display:"Fredoka","Trebuchet MS",sans-serif;
+  --body:"Nunito Sans","Segoe UI",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1020; --surface:#151b31; --ink:#edf0fa; --muted:#a0a9c7; --line:#283052;
+  --navy:#a5b4ff; --coin:#f6c454; --coin-ink:#2b1e00; --up:#3fd39a; --down:#ff7a70; --soft:#1d2444; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1020; --surface:#151b31; --ink:#edf0fa; --muted:#a0a9c7; --line:#283052;
+  --navy:#a5b4ff; --coin:#f6c454; --coin-ink:#2b1e00; --up:#3fd39a; --down:#ff7a70; --soft:#1d2444; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:820px;margin:0 auto;padding-block:16px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:2rem;color:var(--navy)} h2{font-size:1.45rem;color:var(--navy)} h3{font-size:1.1rem}
+p{margin:0}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--coin);outline-offset:2px}
+.btn{background:var(--navy);color:var(--bg);border:none;border-radius:12px;min-height:48px;padding:0 18px;font-weight:800}
+.btn.coin{background:var(--coin);color:var(--coin-ink)}
+.btn.line{background:transparent;color:var(--navy);border:2px solid var(--navy)}
+.btn.buy{background:var(--up);color:#fff} .btn.sell{background:var(--down);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.lead{color:var(--muted);max-width:62ch}
+.small{font-size:.85rem;color:var(--muted)}
+.tag{font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;font-weight:800;color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.up{color:var(--up)} .down{color:var(--down)}
+/* sticky desk bar */
+.desk{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;display:flex;flex-direction:column;gap:8px;border-bottom:2px solid var(--line)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:4px 10px;min-width:0}
+.stat span{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--muted)}
+.stat b{font-family:var(--mono);font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.controls{display:flex;gap:6px;flex-wrap:wrap}
+.controls .btn{flex:1;min-height:44px;padding:0 10px;font-size:.95rem}
+.tabs{display:flex;gap:6px}
+.tab{flex:1;min-height:42px;border-radius:10px;border:2px solid var(--line);background:var(--surface);font-weight:800}
+.tab[aria-selected="true"]{background:var(--navy);color:var(--bg);border-color:var(--navy)}
+/* market list */
+.mk{display:flex;flex-direction:column;gap:8px}
+.asset{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) 84px auto;gap:10px;align-items:center}
+.asset .nm{font-weight:800;overflow-wrap:anywhere}
+.asset .sec{font-size:.75rem;color:var(--muted)}
+.asset .px{font-family:var(--mono);text-align:right;line-height:1.25}
+.asset .px small{display:block;font-size:.78rem}
+.asset .acts{display:flex;gap:6px;grid-column:1/-1;flex-wrap:wrap}
+.asset .acts button{flex:1;min-height:40px;border-radius:10px;font-weight:800;font-size:.85rem;border:2px solid var(--line);background:var(--soft)}
+.asset .acts .b{background:var(--up);border-color:var(--up);color:#fff}
+.asset .acts .s{background:transparent;border-color:var(--down);color:var(--down)}
+.asset .acts .a{background:transparent}
+.asset.held{border-color:color-mix(in srgb,var(--navy) 50%,var(--line))}
+.spark{width:84px;height:34px;display:block}
+.pill{display:inline-block;font-size:.68rem;font-weight:800;border-radius:99px;padding:1px 8px;background:var(--soft);color:var(--muted);margin-left:6px;vertical-align:middle}
+.pill.hot{background:color-mix(in srgb,var(--down) 18%,var(--surface));color:var(--down)}
+/* portfolio */
+.alloc{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--soft)}
+.alloc i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:right;padding:4px 6px;font-weight:800}
+th:first-child,td:first-child{text-align:left;padding-left:0}
+td{padding:7px 6px;border-top:1px solid var(--line);text-align:right;font-family:var(--mono);font-size:.85rem}
+td:first-child{font-family:var(--body);font-weight:800;font-size:.9rem}
+.tablewrap{overflow-x:auto}
+.chart{width:100%;height:auto;display:block}
+/* news */
+.news{display:flex;flex-direction:column;gap:8px}
+.ni{background:var(--surface);border:2px solid var(--line);border-left:6px solid var(--muted);border-radius:12px;padding:10px 12px}
+.ni.pos{border-left-color:var(--up)} .ni.neg{border-left-color:var(--down)} .ni.edu{border-left-color:var(--coin)}
+.ni .when{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(8,12,28,.5);z-index:15;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);color:var(--ink);width:100%;max-width:620px;max-height:90vh;overflow:auto;border-radius:22px 22px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(40px);opacity:0}}}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.presets button{flex:1;min-width:64px;min-height:42px;border-radius:10px;border:2px solid var(--line);background:var(--soft);font-weight:800}
+.presets button[aria-pressed="true"]{border-color:var(--navy);color:var(--navy)}
+input[type=number]{font-family:var(--mono);font-size:1.1rem;min-height:48px;padding:6px 12px;border:2px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);width:100%;box-sizing:border-box}
+.calc{background:var(--soft);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:.9rem}
+.calc b{font-family:var(--mono);text-align:right}
+.choices{display:flex;flex-direction:column;gap:8px}
+.choice{background:var(--soft);border:2px solid transparent;border-radius:12px;padding:12px 14px;text-align:left}
+.choice:hover:not(:disabled){border-color:var(--navy)}
+.choice.right{border-color:var(--up)} .choice.wrong{border-color:var(--down)}
+.choice:disabled{cursor:default}
+.explain{border-left:4px solid var(--coin);padding:4px 0 4px 12px}
+.fund{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fund div{background:var(--soft);border-radius:10px;padding:8px 10px}
+.fund span{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;color:var(--muted)}
+.fund b{font-family:var(--mono)}
+.lessons{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.lessons li{background:var(--soft);border-radius:12px;padding:10px 12px;border-left:5px solid var(--muted)}
+.lessons li.ok{border-left-color:var(--up)} .lessons li.warn{border-left-color:var(--down)}
+.big{font-family:var(--display);font-size:2.2rem;font-weight:700;color:var(--navy)}
+.hero{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.logo{width:60px;height:60px;border-radius:16px;background:var(--navy);color:var(--coin);display:grid;place-items:center;font-family:var(--display);font-size:1.4rem;font-weight:700;flex:none}
+.hero > div{flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px}
+.setup{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.opt{background:var(--soft);border:2px solid transparent;border-radius:14px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.opt[aria-pressed="true"]{border-color:var(--navy);background:var(--surface)}
+.opt b{font-family:var(--display);font-size:1.05rem}
+.foot{color:var(--muted);font-size:.82rem;max-width:68ch}
+/* leverage lab */
+.lev-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.lev-out div{background:var(--soft);border-radius:10px;padding:8px 10px}
+.lev-out span{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;color:var(--muted)}
+.lev-out b{font-family:var(--mono);font-size:1.05rem}
+.wipe{border-radius:12px;padding:10px 12px;font-weight:800;background:color-mix(in srgb,var(--down) 14%,var(--surface));color:var(--down)}
+input[type=range]{width:100%;accent-color:var(--navy);min-height:34px}
+.people{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.person{border:2px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0}
+.person b{font-family:var(--mono);display:block}
+.person.dead{border-color:var(--down);background:color-mix(in srgb,var(--down) 10%,var(--surface))}
+.story{background:var(--soft);border-radius:12px;padding:12px 14px;min-height:4.5em}
+/* rating */
+.score{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.ring{width:96px;height:96px;flex:none}
+.score .lvl{font-family:var(--display);font-size:1.4rem;font-weight:700;color:var(--navy)}
+.comp{display:grid;grid-template-columns:minmax(0,1fr) 110px 44px;gap:6px 10px;align-items:center;font-size:.9rem}
+.comp .bar{height:10px;background:var(--soft);border-radius:6px;overflow:hidden}
+.comp .bar i{display:block;height:100%;background:var(--navy)}
+.comp b{font-family:var(--mono);text-align:right}
+.check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.check li{display:flex;gap:10px;align-items:flex-start}
+.check li::before{content:"○";font-weight:800;color:var(--muted);flex:none;width:18px}
+.check li.ok::before{content:"✓";color:var(--up)}
+.mentor{border:2px solid var(--coin);background:color-mix(in srgb,var(--coin) 10%,var(--surface))}
+.mentor blockquote{margin:0;font-size:1.02rem;border-left:4px solid var(--coin);padding-left:12px}
+/* guided steps */
+.stepbar{display:flex;gap:10px;align-items:center;background:color-mix(in srgb,var(--coin) 16%,var(--surface));border:2px solid var(--coin);border-radius:12px;padding:8px 12px;text-align:left;width:100%}
+.stepbar .n{font-family:var(--display);font-weight:700;background:var(--coin);color:var(--coin-ink);border-radius:8px;padding:2px 8px;flex:none}
+.stepbar .t{flex:1;min-width:0;font-size:.88rem;line-height:1.3}
+.steps{display:flex;flex-direction:column;gap:8px}
+.st{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.st .dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:700;flex:none;background:var(--soft);color:var(--muted)}
+.st.done .dot{background:var(--up);color:#fff}
+.st.cur{border-color:var(--coin)} .st.cur .dot{background:var(--coin);color:var(--coin-ink)}
+.st.lock{opacity:.6}
+.st > div:last-child{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.task{background:var(--soft);border-radius:10px;padding:8px 10px;font-weight:800;font-size:.9rem}
+.toggle{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--soft);border-radius:12px;padding:10px 12px;font-weight:800}
+.sw{width:52px;height:30px;border-radius:99px;border:none;background:var(--line);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--surface);transition:left .15s}
+.sw[aria-checked="true"]{background:var(--up)} .sw[aria-checked="true"]::after{left:25px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:2px solid var(--line);background:var(--surface);border-radius:99px;min-height:36px;padding:0 14px;font-weight:800;font-size:.85rem}
+.chip[aria-pressed="true"]{border-color:var(--navy);color:var(--navy)}
+.ni.res{border-left-color:var(--navy)} .ni.div{border-left-color:var(--coin)}
+.ni table{margin-top:6px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));z-index:20;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 18px;font-weight:800;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+/* ================= ENGINE ================= */
+const ASSETS=[
+  {id:"SVET",n:"Svět 500 ETF",sec:"Indexový fond, 500 firem z celého světa",col:"#22306b",drift:.006,vol:.012,beta:1,div:0,pe:20,debt:"žádné",growth:"průměr trhu",risk:"nízké až střední",etf:true},
+  {id:"KLAS",n:"Pekárny Klas",sec:"Potraviny",col:"#c98a1b",drift:.004,vol:.035,beta:.5,div:.035,pe:14,debt:"nízké",growth:"pomalý, stabilní",risk:"nízké"},
+  {id:"VOLT",n:"Voltik Energy",sec:"Energetika",col:"#2a9d8f",drift:.005,vol:.055,beta:.8,div:.045,pe:12,debt:"střední",growth:"stabilní",risk:"střední"},
+  {id:"HORI",n:"Banka Horizont",sec:"Finance",col:"#4361ee",drift:.005,vol:.06,beta:1.2,div:.05,pe:10,debt:"typické pro banku",growth:"závisí na sazbách",risk:"střední",rate:+1},
+  {id:"STAV",n:"StavMont",sec:"Stavebnictví",col:"#8d6e63",drift:.004,vol:.07,beta:1.3,div:.02,pe:11,debt:"vysoké",growth:"cyklický",risk:"vyšší",rate:-1},
+  {id:"MEDV",n:"MedVia Pharma",sec:"Zdravotnictví",col:"#d6457a",drift:.006,vol:.07,beta:.7,div:.01,pe:22,debt:"nízké",growth:"čeká na schválení léku",risk:"vyšší"},
+  {id:"PIXL",n:"Pixelfarm Games",sec:"Technologie, hry",col:"#7b4fd6",drift:.008,vol:.1,beta:1.4,div:0,pe:30,debt:"nízké",growth:"rychlý",risk:"vysoké"},
+  {id:"NEBU",n:"Nebula AI",sec:"Umělá inteligence",col:"#e85d04",drift:.003,vol:.12,beta:1.6,div:0,pe:60,debt:"střední",growth:"zatím ztrátová, hodně slibů",risk:"velmi vysoké"},
+];
+const WHY={
+  KLAS:{g:["otevřela 12 nových poboček na Moravě","uspěla s řadou celozrnného pečiva","podepsala dodávky pro velký obchodní řetězec"],b:["zdražila mouka a energie","ztratila zakázku pro školní jídelny","musela stáhnout šarži rohlíků z prodeje"]},
+  VOLT:{g:["nová větrná farma běží naplno","výhodně prodala elektřinu na rok dopředu","snížila náklady na údržbu sítě"],b:["teplá zima snížila spotřebu","porucha elektrárny na dva týdny","stát zavedl novou daň z energií"]},
+  HORI:{g:["půjčila rekordní objem hypoték","vyšší sazby zvedly úrokové příjmy","získala 80 000 nových klientů díky aplikaci"],b:["klienti přestali splácet víc úvěrů","pokuta za výpadek internetového bankovnictví","odliv vkladů ke konkurenci"]},
+  STAV:{g:["vyhrála tendr na dálniční obchvat","dokončila velký projekt bytů dřív, než měla","zlevnila ocel a beton"],b:["zpoždění stavby nemocnice a smluvní pokuty","ubylo zakázek na nové byty","zdražilo financování projektů"]},
+  MEDV:{g:["prodeje léku na alergii rostly","uzavřela licenci s firmou v Německu","snížila výrobní náklady"],b:["konkurence vydala levnější lék","drahé klinické studie","výpadek ve výrobním závodě"]},
+  PIXL:{g:["nová hra se prodala ve 2 milionech kusů","předplatné vzrostlo o třetinu","herní engine si licencovala zahraniční studia"],b:["odklad hlavní hry na příští rok","hráči kritizují mikrotransakce","odešel klíčový tým vývojářů"]},
+  NEBU:{g:["podepsala pilotní projekt s bankou","AI asistent má milion uživatelů"],b:["náklady na servery rostou rychleji než tržby","zákazníci zatím za produkt málo platí","pořád je ve ztrátě"]},
+};
+const MONTHS=60, FEE_PCT=.002, FEE_MIN=30, CASH_RATE=.0025;
+const MN=["leden","únor","březen","duben","květen","červen","červenec","srpen","září","říjen","listopad","prosinec"];
+const monthName=m=>MN[m%12]+" "+(1+Math.floor(m/12))+". roku";
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+const rint=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+function newGame(deposit,guided){
+  const crash=rint(22,40), bubble=rint(8,18), rates=rint(10,30), pharma=rint(14,44);
+  const px={},fair={},hist={};
+  for(const a of ASSETS){const p=a.etf?1000:rint(150,1800);px[a.id]=p;fair[a.id]=p;hist[a.id]=[p]}
+  return{m:0,cash:100000,deposit,hold:{},cost:{},px,fair,hist,
+    plan:{crash,bubble,rates,pharma,pharmaOk:Math.random()<.55},
+    bench:{units:100000/px.SVET,save:100000},vals:[100000],benchVals:[100000],saveVals:[100000],
+    fees:0,trades:0,soldInCrash:0,boughtBubbleTop:0,divs:0,unlocked:[],qi:0,qo:null,ok:0,bad:0,guided:!!guided,step:0,drip:false,reinvested:0,divBy:{},results:{},seenResults:false,
+    news:[{m:0,t:"Vítej na burze. Máš 100 000 Kč"+(deposit?" a každý měsíc přidáš "+deposit.toLocaleString("cs-CZ")+" Kč":"")+". Za 5 let uvidíme, jestli porazíš index Svět 500.",k:"edu"}],done:false};
+}
+function portfolioValue(G){let v=G.cash;for(const id in G.hold)v+=G.hold[id]*G.px[id];return v}
+/* one month of market */
+function stepMonth(G){
+  const m=++G.m, P=G.plan, news=[];
+  let mkt=.03*gauss()*.6;
+  const eff={};ASSETS.forEach(a=>eff[a.id]=0);
+  // crash: two bad months, then strong recovery for a year
+  if(m===P.crash-1)news.push({t:"Analytici varují: ceny akcií jsou vysoko a ekonomika zpomaluje.",k:"neg"});
+  if(m===P.crash){mkt-=.17;news.push({t:"KRACH! Burzy po celém světě padají. Lidé ve strachu prodávají.",k:"neg"})}
+  if(m===P.crash+1){mkt-=.09;news.push({t:"Propad pokračuje. Média píšou o konci světa.",k:"neg"})}
+  if(m>P.crash+1&&m<=P.crash+13){mkt+=.022;if(m===P.crash+3)news.push({t:"Trhy se začínají vzpamatovávat. Kdo vydržel, dohání ztráty.",k:"pos"})}
+  // rate hike
+  if(m===P.rates-1)news.push({t:"Příští měsíc zasedá centrální banka. Čeká se zvýšení úrokových sazeb.",k:"edu"});
+  if(m===P.rates){news.push({t:"Centrální banka zvedla úrokové sazby. Bankám to pomáhá, stavebním firmám a hypotékám ne.",k:"neg"});ASSETS.forEach(a=>{if(a.rate)eff[a.id]+=a.rate*.09});mkt-=.02}
+  // pharma
+  if(m===P.pharma-2)news.push({t:"MedVia Pharma čeká rozhodnutí úřadů o novém léku. Výsledek za dva měsíce.",k:"edu"});
+  if(m===P.pharma){if(P.pharmaOk){eff.MEDV+=.35;G.fair.MEDV*=1.35;news.push({t:"MedVia Pharma: nový lék schválen! Akcie letí nahoru.",k:"pos"})}else{eff.MEDV-=.3;G.fair.MEDV*=.72;news.push({t:"MedVia Pharma: lék neschválen. Akcie se propadají.",k:"neg"})}}
+  // Nebula bubble
+  const b=P.bubble;
+  if(m>=b&&m<b+5){eff.NEBU+=.22;if(m===b)news.push({t:"Nebula AI je hit sociálních sítí. Všichni kupují, „tohle poletí na Měsíc“.",k:"pos"});if(m===b+3)news.push({t:"Nebula AI za pár měsíců zdvojnásobila cenu. P/E přes 150. Zkušení investoři varují před bublinou.",k:"edu"})}
+  if(m===b+5){eff.NEBU-=.42;news.push({t:"Bublina praskla. Nebula AI nesplnila sliby a akcie padá o desítky procent.",k:"neg"})}
+  if(m===b+6)eff.NEBU-=.15;
+  // quarterly results season (months 1,4,7,10 of each year)
+  if(m%3===1){const rows=[];
+    for(const a of ASSETS){if(a.etf)continue;
+      const exp=G.fair[a.id]/a.pe/4;let sur=Math.max(-.3,Math.min(.3,gauss()*.1));
+      const hype=a.id==="NEBU"&&m>=b&&m<b+5;if(hype)sur=Math.min(sur,-.04);
+      if(!hype){eff[a.id]+=sur*.6;G.fair[a.id]*=1+sur*.3}
+      const rev=a.drift*12+sur*.4;
+      const pool=WHY[a.id][sur>=0?"g":"b"];const why=pool[Math.floor(Math.random()*pool.length)];
+      G.results[a.id]={m,exp,act:exp*(1+sur),sur,rev,why};rows.push({id:a.id,n:a.n,exp,act:exp*(1+sur),sur,rev,hype,why})}
+    news.push({t:"Výsledková sezóna: firmy zveřejnily hospodaření za uplynulé čtvrtletí.",k:"res",rows})}
+  // prices
+  for(const a of ASSETS){
+    G.fair[a.id]*=1+a.drift;
+    const gap=Math.log(G.fair[a.id]/G.px[a.id]);
+    let r=a.drift+a.beta*mkt+(a.etf?.004:a.vol)*gauss()*.7+eff[a.id]+(a.etf?0:.08*gap);
+    r=Math.max(-.6,Math.min(.6,r));
+    G.px[a.id]=Math.max(1,G.px[a.id]*(1+r));G.hist[a.id].push(G.px[a.id]);
+  }
+  // dividends: paid every quarter, optionally reinvested (DRIP)
+  if(m%3===0){const list=[];let tot=0;
+    for(const id in G.hold){const a=ASSETS.find(x=>x.id===id);if(!a.div)continue;
+      const amt=G.hold[id]*G.px[id]*a.div/4;if(amt<=0)continue;tot+=amt;G.divBy[id]=(G.divBy[id]||0)+amt;
+      if(G.drip){G.hold[id]+=amt/G.px[id];G.cost[id]=(G.cost[id]||0)+amt;G.reinvested+=amt}else G.cash+=amt;
+      list.push({n:a.n,amt})}
+    if(tot>0){G.divs+=tot;news.push({t:"Dividendy: připsáno "+Math.round(tot).toLocaleString("cs-CZ")+" Kč"+(G.drip?", automaticky reinvestováno do stejných akcií.":" na účet jako hotovost."),k:"div",list})}}
+  G.cash+=Math.max(0,G.cash)*CASH_RATE;
+  G.cash+=G.deposit;
+  // benchmarks
+  G.bench.units+=G.deposit/G.px.SVET;G.bench.save=G.bench.save*(1+CASH_RATE)+G.deposit;
+  G.vals.push(portfolioValue(G));G.benchVals.push(G.bench.units*G.px.SVET);G.saveVals.push(G.bench.save);
+  news.forEach(n=>G.news.unshift({m,...n}));G.news=G.news.slice(0,40);
+  if(m>=MONTHS)G.done=true;
+}
+const pe=(G,a)=>a.pe*G.px[a.id]/G.fair[a.id];
+const fee=amt=>Math.max(FEE_MIN,amt*FEE_PCT);
+function buy(G,id,amt){const f=fee(amt);if(amt<=0||amt+f>G.cash+1e-6)return false;G.cash-=amt+f;G.fees+=f;G.trades++;G.hold[id]=(G.hold[id]||0)+amt/G.px[id];G.cost[id]=(G.cost[id]||0)+amt+f;
+  if(id==="NEBU"&&G.m>=G.plan.bubble+2&&G.m<G.plan.bubble+5)G.boughtBubbleTop++;return true}
+function sell(G,id,frac){const u=G.hold[id]||0;if(u<=0)return false;const su=u*frac,amt=su*G.px[id],f=Math.min(fee(amt),amt);G.cash+=amt-f;G.fees+=f;G.trades++;
+  G.cost[id]=(G.cost[id]||0)*(1-frac);G.hold[id]=u-su;if(G.hold[id]<1e-9){delete G.hold[id];delete G.cost[id]}
+  if(G.m>=G.plan.crash&&G.m<=G.plan.crash+2)G.soldInCrash+=amt;return true}
+</script>
+
+<script>
+/* ================= QUESTIONS ================= */
+const QS=[
+  {"d": 3, "q": "Co ukazuje ukazatel P/E?", "o": ["Kolikrát je cena akcie vyšší než zisk na akcii", "Kolik procent zisku firma každý rok vyplatí akcionářům na dividendách", "O kolik procent akcie za poslední rok vyrostla"], "a": 0, "e": "P/E 20 znamená, že za každou korunu ročního zisku platíš 20 Kč. Vysoké P/E = trh čeká velký růst, nebo je akcie předražená."},
+  {"d": 1, "q": "Co je diverzifikace?", "o": ["Rozložení peněz do více různých investic", "Postupný nákup více akcií téže firmy, aby se průměrovala cena", "Přesouvání peněz tam, kde se zrovna nejvíc vydělává"], "a": 0, "e": "Když máš 10 různých firem a jedna zkrachuje, přijdeš o desetinu, ne o všechno. Víc kusů jedné firmy riziko nesnižuje."},
+  {"d": 2, "q": "Trh spadl o 25 %. Co historicky investorům škodilo nejvíc?", "o": ["Prodat v panice na dně", "Držet a pokračovat v pravidelném investování", "Přikoupit levnější akcie"], "a": 0, "e": "Kdo prodá na dně, zafixuje ztrátu a často zmešká návrat. Dlouhodobě se trhy po krachu zatím vždy vzpamatovaly, i když to někdy trvalo roky."},
+  {"d": 1, "q": "Co je ETF?", "o": ["Fond na burze, který kopíruje celý index", "Akcie jedné velké technologické firmy, kterou drží každý", "Spořicí účet s garantovaným výnosem"], "a": 0, "e": "Jedním nákupem vlastníš kousek stovek firem. Poplatky bývají nízké, ale výnos zaručený není, s trhem může klesnout i ETF."},
+  {"d": 2, "q": "Proč na poplatcích záleží?", "o": ["Ukusují výnos a za roky dělají velký rozdíl", "Nezáleží na nich, 0,2 % z obchodu je zanedbatelná částka", "Platí se jen při prodeji, nákup je zdarma"], "a": 0, "e": "0,2 % za obchod vypadá málo. Ale kdo obchoduje často, zaplatí za rok klidně přes 2 % jen na poplatcích, a ty se odečítají každý rok znovu."},
+  {"d": 1, "q": "Co je volatilita?", "o": ["Jak moc a jak rychle cena kolísá", "Jestli cena dlouhodobě roste, nebo klesá", "Jak velkou dividendu firma vyplácí"], "a": 0, "e": "Vysoká volatilita = velké skoky nahoru i dolů. Potenciální zisk, ale i větší riziko a nervy. Směr ceny to neříká."},
+  {"d": 2, "q": "Co obvykle udělá zvýšení úrokových sazeb?", "o": ["Zdraží půjčky a uškodí zadluženým firmám", "Pomůže všem firmám, protože dostanou vyšší úroky z vkladů", "Nic, sazby se týkají jen bank, ne akcií"], "a": 0, "e": "Dražší úvěry brzdí stavby i hypotéky. Bankám naopak vyšší sazby často zvednou zisky."},
+  {"d": 3, "q": "Akcie zdražila za 4 měsíce dvakrát, všichni o ní mluví a P/E je přes 150. Co to připomíná?", "o": ["Spekulativní bublinu", "Silnou firmu, kterou je nejlepší koupit hned", "Bezpečnou investici, když o ní všichni mluví"], "a": 0, "e": "Když cena roste kvůli humbuku a ne kvůli ziskům, často to končí prudkým pádem. Kdo kupuje na vrcholu, prodělá nejvíc."},
+  {"d": 1, "q": "Co je dividenda?", "o": ["Část zisku, kterou firma vyplácí akcionářům", "Garantovaný úrok, který dostaneš za to, že akcii držíš", "Poplatek, který platíš brokerovi"], "a": 0, "e": "Stabilní firmy (potraviny, energetika, banky) často vyplácejí dividendy. Zaručené ale nejsou, firma je může snížit nebo zrušit."},
+  {"d": 1, "q": "Co je býčí a medvědí trh?", "o": ["Býčí = ceny dlouhodobě rostou, medvědí = klesají", "Býčí = ceny klesají, medvědí = rostou", "Názvy americké a evropské burzy"], "a": 0, "e": "Býk útočí rohy nahoru, medvěd tlapou dolů. Oba trhy se střídají a nikdo spolehlivě neví kdy."},
+  {"d": 3, "q": "Kamarád radí: „Teď prodej a koupíš zpátky levněji, až to spadne.“ Co je problém?", "o": ["Musíš dvakrát trefit správný okamžik", "Žádný, když trh rostl moc rychle, určitě brzy spadne a koupíš levněji", "Jen poplatky, jinak je to jistá strategie"], "a": 0, "e": "Musel(a) bys trefit, kdy prodat i kdy koupit zpět. Většina lidí, kteří to zkoušejí, zaostane za tím, kdo jen drží."},
+  {"d": 2, "q": "Proč pravidelně investovat stejnou částku každý měsíc?", "o": ["Průměruješ cenu a neřešíš načasování", "Protože pak nemůžeš prodělat", "Protože tak vždycky nakoupíš za nejnižší cenu v daném roce"], "a": 0, "e": "Když cena klesne, za stejnou částku koupíš víc kusů. Riziko ztráty to neodstraní a nejnižší cenu tím netrefíš, ale snižuje to vliv špatného načasování."},
+  {"d": 2, "q": "Firma má vysoké dluhy. Kdy jí to nejvíc ublíží?", "o": ["Když rostou sazby a přijde krize", "Když se jí daří a roste, protože musí víc splácet", "Když úrokové sazby klesají"], "a": 0, "e": "Splátky dluhů rostou se sazbami a v krizi chybějí tržby. Zadlužené firmy proto v těžkých časech padají víc."},
+  {"d": 2, "q": "Proč se říká „nekupuj akcie na dluh“?", "o": ["Dluh zůstane, i když akcie spadnou", "Banky to dospělým zakazují", "Platí to jen pro rizikové akcie, u ETF to nevadí"], "a": 0, "e": "Páka zvětšuje zisky i ztráty. I ETF může na čas spadnout o desítky procent a dluh se při tom nezmenší. Můžeš přijít o víc, než jsi vložil(a)."},
+  {"d": 1, "q": "Investiční horizont 1 rok vs. 15 let. Kdy dávají akcie větší smysl?", "o": ["Při dlouhém horizontu", "Při jednom roce, protože rychlý zisk je lepší než čekání", "Na horizontu nezáleží, akcie rostou pořád stejně"], "a": 0, "e": "Peníze, které budeš potřebovat brzy (rezerva, nákup auta), patří na spořicí účet. Akcie jsou na roky."},
+  {"d": 1, "q": "Na internetu slibují „tajnou strategii se ziskem 10 % týdně“. Co s tím?", "o": ["Je to téměř jistě podvod", "Vyzkouším s malou částkou, nic tím nezkazím", "Když má dobré recenze, asi funguje"], "a": 0, "e": "Podvodníci často nechají malou částku vydělat a recenze si vyrábějí. I nejlepší investoři světa mají dlouhodobě jen výjimečně přes 20 % ročně. 10 % týdně je nesmysl."},
+  {"d": 3, "q": "Co je tržní kapitalizace?", "o": ["Hodnota celé firmy na burze", "Kolik peněz má firma v bance a v hotovosti", "Kolik firma utrží za rok"], "a": 0, "e": "Podle kapitalizace se firmy dělí na velké a malé. Velké bývají stabilnější, malé můžou růst rychleji, ale i víc kolísat."},
+  {"d": 3, "q": "Proč se akcie po skvělé zprávě někdy nehne nebo dokonce klesne?", "o": ["Trh dobrou zprávu čekal a měl ji už v ceně", "Velcí investoři cenu schválně drží dole", "Burza na zprávy reaguje až za týden"], "a": 0, "e": "Ceny reagují na překvapení, ne na zprávu samotnou. „Kupuj na fámách, prodávej na faktech“ je staré burzovní rčení."},
+  {"d": 3, "q": "Máš 10 000 Kč a obchoduješ s pákou 5×. Akcie klesne o 20 %. Co se stane?", "o": ["Přijdeš o celý vklad 10 000 Kč", "Přijdeš o 2 000 Kč, tedy 20 %", "Přijdeš o 5 000 Kč"], "a": 0, "e": "S pákou 5× držíš akcie za 50 000 Kč. Pokles o 20 % je ztráta 10 000 Kč, tedy celý tvůj vklad. Zbytek byla půjčka."},
+  {"d": 3, "q": "Co je margin call?", "o": ["Výzva doplnit peníze, jinak broker prodá", "Upozornění, že akcie dosáhla tvé cílové ceny a můžeš prodat", "Výzva k výběru zisku z obchodu"], "a": 0, "e": "Když ztráta s pákou sežere většinu tvého vkladu, broker chce peníze doplnit. Když nedoplníš, prodá tvoje akcie, často v nejhorší chvíli."},
+  {"d": 2, "q": "Co je dluhopis?", "o": ["Půjčka státu nebo firmě za úrok", "Malý podíl ve firmě, se kterým dostáváš dividendy", "Fond, který kopíruje celý trh"], "a": 0, "e": "Kupuješ dluh: dlužník ti platí úrok a na konci vrátí peníze. Dluhopisy bývají klidnější než akcie, ale i dlužník může zkrachovat. Čím vyšší úrok slibuje, tím bývá rizikovější."},
+  {"d": 1, "q": "Co je index, třeba „Svět 500“ ve hře?", "o": ["Koš mnoha firem, který měří trh", "Žebříček akcií, které experti doporučují koupit", "Cena nejdražší akcie na burze"], "a": 0, "e": "Index sleduje velkou skupinu firem a ukazuje, jak se daří trhu jako celku. ETF na index ho jen kopíruje, nikdo v něm nevybírá „ty nejlepší“."},
+  {"d": 3, "q": "Akcie spadla o 50 %. O kolik musí vyrůst, abys byl(a) zpátky na nule?", "o": ["O 100 %", "O 50 %", "O 25 %"], "a": 0, "e": "Ze 100 Kč spadne na 50 Kč. Aby se vrátila na 100 Kč, musí se zdvojnásobit, tedy +100 %. Velké ztráty se proto dohánějí velmi těžko."},
+  {"d": 3, "q": "Jeden rok −10 %, další rok +10 %. Kde jsi?", "o": ["Lehce v mínusu", "Přesně na nule", "Lehce v plusu"], "a": 0, "e": "Ze 100 Kč je po poklesu 90 Kč. 10 % z 90 je 9, takže skončíš na 99 Kč. Procenta se nesčítají, počítají se vždy z aktuální částky."},
+  {"d": 1, "q": "Kdo je broker?", "o": ["Prostředník pro nákup na burze", "Firma, jejíž akcie kupuješ, a která ti je prodává", "Státní úřad, který hlídá ceny akcií"], "a": 0, "e": "Sám na burzu přímo nemůžeš, potřebuješ prostředníka. Broker za to bere poplatky, proto stojí za to je porovnávat."},
+  {"d": 2, "q": "Proč firma vydává akcie?", "o": ["Aby získala peníze na růst, které nemusí splácet", "Protože to zákon vyžaduje od každé firmy", "Aby mohla zaměstnancům platit nižší mzdy"], "a": 0, "e": "Investoři dají firmě peníze a dostanou za ně podíl. Na rozdíl od úvěru je firma nesplácí, ale noví akcionáři se dělí o zisk."},
+  {"d": 3, "q": "Investuješ 1 000 Kč měsíčně 30 let s výnosem 7 % ročně. Kolik zhruba budeš mít?", "o": ["Kolem 1,2 milionu Kč", "360 000 Kč, kolik jsem vložil(a)", "Kolem 500 000 Kč"], "a": 0, "e": "Vložíš 360 000 Kč, zbytek udělá složené úročení. Výnos 7 % není zaručený, akcie můžou i roky klesat. Ukazuje to ale, proč se vyplatí začít brzy."},
+  {"d": 2, "q": "Proč ve hře srovnáváš své portfolio s indexem?", "o": ["Abys viděl(a), jestli porazíš celý trh", "Protože index je vždycky nejlepší možná investice a stojí za to ho kopírovat", "Protože index ukazuje, kolik platíš na poplatcích"], "a": 0, "e": "Kdo vybírá jednotlivé akcie, by měl index porazit, jinak se ta práce nevyplatí. Většině lidí i profesionálních fondů se to dlouhodobě nedaří."},
+  {"d": 2, "q": "Kamarád zbohatl na jedné kryptoměně. Co z toho plyne?", "o": ["Mohl mít štěstí, o poražených se nemluví", "Že kryptoměny jsou jistý výdělek", "Že stačí koupit tu samou kryptoměnu a vydělám na ní taky"], "a": 0, "e": "Slyšíme hlavně o vítězích. Těch, kdo na stejné věci prodělali, bývá víc, jen se tím nechlubí. Minulý zisk někoho jiného nic nezaručuje."},
+  {"d": 2, "q": "Proč investovat přes regulovaného brokera?", "o": ["Dohlíží na něj regulátor a chrání majetek klientů", "Regulovaný broker zaručí, že nikdy neproděláš", "Neregulovaní brokeři mají vždycky vyšší poplatky"], "a": 0, "e": "Regulace (v Česku Česká národní banka) neochrání před poklesem cen, ale před tím, že broker zmizí s tvými penězi. Ověřit to jde v seznamu regulovaných subjektů na webu ČNB."},
+  {"d": 3, "q": "Firma hlásí rekordní tržby, ale je ve ztrátě. Co to znamená?", "o": ["Náklady jsou vyšší než příjmy", "Daří se jí, tržby jsou pro firmu to nejdůležitější číslo", "Je to chyba v účetnictví"], "a": 0, "e": "Tržby jsou všechny peníze za prodej, zisk je to, co zbyde po zaplacení nákladů. Firma může prodávat čím dál víc a přitom prodělávat."},
+  {"d": 2, "q": "Proč mít část peněz bokem, i když investuješ?", "o": ["Abys v nouzi nemusel(a) prodávat v propadu", "Protože hotovost dlouhodobě vydělá víc než akcie", "Protože akcie se nedají prodat dřív než za rok od nákupu"], "a": 0, "e": "Rezerva tě chrání před nucenými prodeji. Kdo musí prodat v krachu kvůli nečekanému výdaji, zafixuje ztrátu."},
+];
+</script>
+
+<script>
+/* ================= UI ================= */
+const $app=document.getElementById("app");
+const kc=(n,d=0)=>(n<0?"−":"")+Math.abs(n).toLocaleString("cs-CZ",{minimumFractionDigits:d,maximumFractionDigits:d})+" Kč";
+const pct=(n,d=1)=>(n>0?"+":n<0?"−":"")+Math.abs(n*100).toLocaleString("cs-CZ",{minimumFractionDigits:d,maximumFractionDigits:d})+" %";
+const cls=n=>n>0?"up":n<0?"down":"";
+function h(tag,a={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(a)){if(k==="class")e.className=v;else if(k==="style")e.style.cssText=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else if(v!==null&&v!==undefined&&v!==false)e.setAttribute(k,v===true?"":v)}for(const c of kids.flat())if(c!=null&&c!==false)e.append(c);return e}
+const SVGNS="http://www.w3.org/2000/svg";
+function s(tag,a={},...kids){const e=document.createElementNS(SVGNS,tag);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);kids.forEach(c=>c!=null&&e.append(c));return e}
+const store={get(k,d){try{const v=localStorage.getItem("pk2-"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("pk2-"+k,JSON.stringify(v))}catch(e){}}};
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const orderQ=b=>[1,2,3].flatMap(d=>shuffle(b.map((q,i)=>(q.d||2)===d?i:-1).filter(i=>i>=0)));
+
+let G=store.get("game",null);if(G)G=Object.assign({guided:false,step:0,drip:false,reinvested:0,divBy:{},results:{},seenResults:false,bonus:0,dailyOk:0},G);
+let tab=G&&G.guided?"kroky":"trh";let setupDeposit=2000,setupGuided=true,busy=false;
+const save=()=>store.set("game",G);
+
+function spark(vals,w=84,hh=34){
+  const v=vals.slice(-13);const mn=Math.min(...v),mx=Math.max(...v),r=mx-mn||1;
+  const pts=v.map((x,i)=>[(i/(v.length-1||1))*(w-4)+2,hh-3-(x-mn)/r*(hh-6)]);
+  const up=v[v.length-1]>=v[0];const d=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  return s("svg",{class:"spark",viewBox:"0 0 "+w+" "+hh,"aria-hidden":"true"},
+    s("path",{d:d+" L"+(w-2)+" "+hh+" L2 "+hh+" Z",fill:up?"var(--up)":"var(--down)","fill-opacity":".12",stroke:"none"}),
+    s("path",{d,fill:"none",stroke:up?"var(--up)":"var(--down)","stroke-width":"2","stroke-linejoin":"round"}),
+    s("circle",{cx:pts[pts.length-1][0],cy:pts[pts.length-1][1],r:"2.5",fill:up?"var(--up)":"var(--down)"}));
+}
+function lineChart(series,labels){
+  const W=640,H=230,L=58,R=12,T=14,B=28;const all=series.flatMap(x=>x.v);let mn=Math.min(...all),mx=Math.max(...all);
+  const pad=(mx-mn)*.08||1000;mn=Math.max(0,mn-pad);mx+=pad;
+  const step=niceStep((mx-mn)/4);const t0=Math.ceil(mn/step)*step;
+  const n=series[0].v.length;const X=i=>L+(i/(Math.max(n-1,1)))*(W-L-R),Y=v=>T+(1-(v-mn)/(mx-mn))*(H-T-B);
+  const g=s("svg",{class:"chart",viewBox:"0 0 "+W+" "+H,role:"img","aria-label":"Vývoj hodnoty portfolia v čase"});
+  for(let t=t0;t<=mx;t+=step){g.append(s("line",{x1:L,x2:W-R,y1:Y(t),y2:Y(t),stroke:"var(--line)","stroke-width":"1"}));
+    const tx=s("text",{x:L-6,y:Y(t)+4,"text-anchor":"end","font-size":"11",fill:"var(--muted)","font-family":"JetBrains Mono, monospace"});tx.textContent=Math.round(t/1000)+" tis.";g.append(tx)}
+  for(let i=0;i<n;i+=12){const tx=s("text",{x:X(i),y:H-8,"text-anchor":i===0?"start":"middle","font-size":"11",fill:"var(--muted)"});tx.textContent=i===0?"start":(i/12)+". rok";g.append(tx)}
+  for(const se of series){const d=se.v.map((v,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join(" ");
+    g.append(s("path",{d,fill:"none",stroke:se.c,"stroke-width":se.w||2,"stroke-dasharray":se.dash||"","stroke-linejoin":"round"}));
+    const last=se.v[se.v.length-1];g.append(s("circle",{cx:X(n-1),cy:Y(last),r:"3.5",fill:se.c}))}
+  return g;
+}
+function niceStep(x){const p=Math.pow(10,Math.floor(Math.log10(x)));const f=x/p;return (f<1.5?1:f<3?2:f<7?5:10)*p}
+
+/* ---------- investor rating & mentor ---------- */
+/* AUTOR: sem doplňte své zkušenosti. Zobrazí se až hráči, který je připravený na skutečnou burzu. */
+const MENTOR={
+  name:"",          // např. "Petr, investuje od roku 2008"
+  intro:"Investuju už nějaký ten rok. Kdybych měl mladšímu já předat jen tři věci, byly by tyhle:",
+  tips:[
+    "Trpělivost. Je to největší výhoda, jakou jako investor máš. Výsledky se neukážou za měsíc ani za rok, ale za deset a víc let. Kdo pořád kouká na grafy a obchoduje, většinou jen platí poplatky a nervy.",
+    "Složené úročení. Funguje jako sněhová koule: na začátku roste pomalu a skoro to nevidíš, ale čím déle ji necháš válet, tím rychleji nabírá. Proto začni co nejdřív, i s malou částkou, a výnosy i dividendy nech pracovat dál.",
+    "Propady o 20 % i víc k investování patří. Přijdou, jen nikdo neví kdy. V tu chvíli je nejtěžší neprodat. Když vydržíš a pokračuješ v pravidelném investování, nakupuješ levněji, a to se ti dlouhodobě často vrátí. Proto investuj jen peníze, které nebudeš roky potřebovat."
+  ],
+  story:""          // volitelně: příběh, třeba o prvním krachu, který jste zažil
+};
+const LEVELS=[[0,"Nováček"],[40,"Učeň"],[60,"Pokročilý"],[75,"Připravený"],[90,"Zkušený investor"]];
+function finishedGames(){return store.get("history",[])}
+function rating(){
+  const H=finishedGames();const cur=G&&!G.done?G:null;
+  let ok=H.reduce((t,x)=>t+x.ok,0)+(cur?cur.ok:0),bad=H.reduce((t,x)=>t+x.bad,0)+(cur?cur.bad:0);const n=ok+bad,acc=n?ok/n:0;
+  const guide=Math.max(0,...H.map(x=>x.steps||0),cur?cur.step:0);
+  const games=H.length;
+  const calmGames=H.filter(x=>!x.panic).length;
+  const avg=(f,d)=>H.length?H.reduce((t,x)=>t+f(x),0)/H.length:d;
+  const comps=[
+    {n:"Znalosti",max:30,v:30*acc*Math.min(1,n/15),d:n?Math.round(acc*100)+" % správně z "+n+" otázek":"zatím žádné odpovědi"},
+    {n:"Klid v krizi",max:20,v:games?20*calmGames/games:0,d:games?calmGames+" z "+games+" her bez prodeje v panice":"dohraj hru s krachem"},
+    {n:"Rozložení rizika",max:10,v:avg(x=>x.maxShare<=.4?10:x.maxShare<=.6?5:0,0),d:"žádná pozice nad 40 %"},
+    {n:"Nízké poplatky",max:10,v:avg(x=>x.feeRatio<=.01?10:x.feeRatio<=.02?5:0,0),d:"poplatky do 1 % portfolia"},
+    {n:"Výsledek vs. index",max:10,v:avg(x=>Math.max(0,Math.min(10,10+x.diff*100)),0),d:"nezaostat o víc než 10 %"},
+    {n:"Průvodce",max:10,v:10*guide/STEPS.length,d:guide+" z "+STEPS.length+" kroků"},
+    {n:"Zkušenost",max:10,v:10*Math.min(games,3)/3,d:games+" dohraných her z 3"},
+  ];
+  const score=Math.round(comps.reduce((t,c)=>t+c.v,0));
+  let lv=0;LEVELS.forEach((x,i)=>{if(score>=x[0])lv=i});
+  const last=H[H.length-1];
+  const reqs=[
+    {t:"Celkové hodnocení aspoň 75 bodů",ok:score>=75},
+    {t:"Dokončený průvodce (všech "+STEPS.length+" kroků)",ok:guide>=STEPS.length},
+    {t:"Aspoň 2 dohrané hry",ok:games>=2},
+    {t:"Aspoň 20 zodpovězených otázek s úspěšností 80 % a víc",ok:n>=20&&acc>=.8},
+    {t:"V poslední hře žádný prodej v panice během krachu",ok:!!last&&!last.panic},
+  ];
+  return{score,lv,comps,reqs,ready:reqs.every(r=>r.ok)};
+}
+function ringSvg(score){const r=40,c=2*Math.PI*r;return s("svg",{class:"ring",viewBox:"0 0 96 96","aria-hidden":"true"},
+  s("circle",{cx:48,cy:48,r,fill:"none",stroke:"var(--soft)","stroke-width":"9"}),
+  s("circle",{cx:48,cy:48,r,fill:"none",stroke:score>=75?"var(--up)":"var(--coin)","stroke-width":"9","stroke-linecap":"round","stroke-dasharray":(c*score/100)+" "+c,transform:"rotate(-90 48 48)"}),
+  (()=>{const t=s("text",{x:48,y:55,"text-anchor":"middle","font-size":"24","font-weight":"700",fill:"var(--ink)","font-family":"Fredoka, sans-serif"});t.textContent=score;return t})())}
+function ratingSheet(){
+  const R_=rating();const next=LEVELS[R_.lv+1];
+  openSheet(h("span",{class:"tag"},"Investorské hodnocení"),
+    h("div",{class:"score"},ringSvg(R_.score),h("div",{},h("div",{class:"lvl"},LEVELS[R_.lv][1]),h("p",{class:"small"},next?"Do úrovně „"+next[1]+"“ chybí "+(next[0]-R_.score)+" bodů.":"Nejvyšší úroveň."))),
+    h("div",{class:"comp"},...R_.comps.flatMap(c=>[h("div",{},h("b",{style:"font-family:var(--body);text-align:left"},c.n),h("div",{class:"small"},c.d)),h("div",{class:"bar"},h("i",{style:"width:"+(c.v/c.max*100)+"%"})),h("b",{},Math.round(c.v)+"/"+c.max)])),
+    h("h3",{},"Připraven(a) na skutečnou burzu?"),
+    h("ul",{class:"check"},...R_.reqs.map(r=>h("li",{class:r.ok?"ok":""},r.t))),
+    R_.ready?h("button",{class:"btn coin",onclick:mentorView},"Otevřít: Co bych ti rád předal"):h("p",{class:"small"},"Až splníš všechny body, odemkne se sekce se zkušenostmi autora hry a s tím, co je dobré vědět, než se člověk do skutečného investování pustí."),
+    h("button",{class:"btn line",onclick:closeSheet},"Zavřít"));
+}
+function mentorView(){
+  closeSheet();
+  const has=MENTOR.intro||MENTOR.tips.length||MENTOR.story;
+  $app.replaceChildren(
+    h("div",{class:"row",style:"justify-content:space-between"},h("button",{class:"btn line",style:"min-height:40px",onclick:render},"← Zpět"),h("span",{class:"tag"},"Odemčeno")),
+    h("div",{class:"card mentor"},h("span",{class:"tag"},"Předání zkušeností"),h("h2",{},"Co bych ti rád předal"),
+      has?[MENTOR.name?h("p",{style:"font-weight:800"},MENTOR.name):null,MENTOR.intro?h("p",{},MENTOR.intro):null,
+        MENTOR.tips.length?h("ul",{class:"lessons"},...MENTOR.tips.map(t=>h("li",{class:"ok"},t))):null,
+        MENTOR.story?h("blockquote",{},MENTOR.story):null]
+      :h("p",{class:"small"},"Autor sem brzy doplní své osobní zkušenosti.")),
+    h("div",{class:"card"},h("h3",{},"Než vložíš skutečné peníze"),
+      h("ul",{class:"lessons"},
+        h("li",{},"Měj rezervu na 3 až 6 měsíců výdajů na spořicím účtu. Investuj až to, co zbyde."),
+        h("li",{},"Nejdřív splať drahé dluhy (kreditka, kontokorent, spotřebitelské půjčky)."),
+        h("li",{},"Investuj jen peníze, které aspoň 5 let nebudeš potřebovat."),
+        h("li",{},"Pokud ti ještě není 18, účet za tebe musí založit rodič nebo jiný zákonný zástupce. Proberte to spolu."),
+        h("li",{},"Vyber si regulovaného obchodníka s cennými papíry. Ověřit to jde v seznamu regulovaných subjektů na webu České národní banky."),
+        h("li",{},"Porovnej poplatky: za nákup, za vedení účtu, za převod měny. Malé procento dělá za roky velký rozdíl."),
+        h("li",{},"Začni malou částkou a pravidelně, třeba širokým indexovým ETF. Jednotlivé akcie až s tím, co si můžeš dovolit ztratit."),
+        h("li",{},"Zjisti, jak se daní zisky a dividendy (v Česku platí například tzv. časový test). Pravidla se mění, ověř si aktuální stav."),
+        h("li",{},"Skutečné peníze bolí víc než herní. Až přijde první propad, vzpomeň si na krach ze hry."))),
+    h("p",{class:"foot"},"Tahle hra je jen o učení. Nic tu není rada, do čeho a kdy investovat. Až se jednou rozhodneš investovat doopravdy, rozhodnutí i riziko budou tvoje."));
+  window.scrollTo(0,0);
+}
+/* ---------- leverage lab ---------- */
+const LEV_PATH=[100,110,118,106,79,88,101,116];
+const LEV_TXT=[
+  "Tři kamarádi, každý má 10 000 Kč a kupuje stejnou akcii za 100 Kč. Jana bez páky, Petr s pákou 2×, Tomáš s pákou 5×. Tomáš si tedy od brokera půjčil 40 000 Kč a drží akcie za 50 000 Kč.",
+  "Akcie roste o 10 %. Jana má +10 %, Petr +20 % a Tomáš +50 %. Tomáš se směje: „Vidíte? Páka je skvělá.“",
+  "Další růst, akcie je na 118 Kč. Tomáš má skoro dvojnásobek, +90 %. Uvažuje, že si příště vezme pákou 10×.",
+  "Akcie klesne o 10 % na 106 Kč. Jana skoro nic necítí. Tomášovi zmizely dvě třetiny zisku za jediný měsíc.",
+  "KRACH. Akcie spadne o 25 % na 79 Kč. Jana je na −21 % a čeká. Petr je na −42 %, bolí to, ale drží. Tomáš: jeho akcie mají hodnotu 39 500 Kč, ale dluží 40 000 Kč. Broker pozici uzavřel. Přišel o celých 10 000 Kč a ještě dluží 500 Kč.",
+  "Trh se pomalu zvedá, akcie je na 88 Kč. Jana i Petr se vracejí. Tomáš už nemá co vracet, jeho akcie byly prodány na dně.",
+  "Akcie je zpátky nad startem, na 101 Kč. Jana je v plusu. Petr skoro na nule. Tomáš je pořád na −100 %.",
+  "Po roce je akcie na 116 Kč. Jana +16 %, Petr +32 %. Tomáš o všechno přišel, i když akcie nakonec vyrostla. Páka mu nevzala jen peníze, vzala mu i čas, který by stačil na návrat.",
+];
+function levEquity(L,p){const own=10000,pos=own*L,loan=pos-own;return pos*p/100-loan}
+let levStep=0;
+function leverageView(){
+  closeSheet();
+  // calculator state
+  let own=10000,L=5,chg=-10;
+  const calcOut=h("div",{style:"display:flex;flex-direction:column;gap:10px"});
+  const levPres=h("div",{class:"presets"});const chgI=h("input",{type:"range",id:"chg",min:-50,max:50,step:1,value:chg});const chgO=h("output",{for:"chg",class:"num"});
+  function drawCalc(){
+    levPres.replaceChildren(...[1,2,5,10,20].map(x=>h("button",{"aria-pressed":L===x?"true":"false",onclick:()=>{L=x;drawCalc()}},x+"×")));
+    chgO.textContent=(chg>0?"+":"")+chg+" %";
+    const pos=own*L,loan=pos-own,eq=pos*(1+chg/100)-loan,wipe=100/L;
+    calcOut.replaceChildren(
+      h("div",{class:"lev-out"},h("div",{},h("span",{},"Tvoje peníze"),h("b",{},kc(own))),h("div",{},h("span",{},"Půjčka od brokera"),h("b",{},kc(loan))),h("div",{},h("span",{},"Akcie celkem za"),h("b",{},kc(pos))),
+        h("div",{},h("span",{},"Po změně ti zbude"),h("b",{class:cls(eq-own)},kc(Math.max(eq,0)))),h("div",{},h("span",{},"Výsledek z tvých peněz"),h("b",{class:cls(eq-own)},pct(Math.max(eq,0)/own-1,0)))),
+      eq<=0?h("div",{class:"wipe"},"Přišel(a) jsi o všechno"+(eq<0?" a ještě dlužíš "+kc(-eq)+".":".")+" Akcii stačilo spadnout o "+wipe.toFixed(wipe%1?1:0).replace(".",",")+" %."):
+        h("p",{class:"small"},L>1?"Celý vklad zmizí, když akcie spadne o "+wipe.toFixed(wipe%1?1:0).replace(".",",")+" %. Ve skutečnosti broker pozici zavře ještě dřív (margin call) a k tomu platíš úrok z půjčky.":"Bez páky můžeš přijít nejvýš o to, co jsi vložil(a), a jen když akcie spadne na nulu."));
+  }
+  chgI.oninput=()=>{chg=+chgI.value;drawCalc()};
+  // model story
+  const storyBox=h("div");
+  function drawStory(){
+    const p=LEV_PATH[levStep];const people=[["Jana","bez páky",1],["Petr","páka 2×",2],["Tomáš","páka 5×",5]];
+    const dead=levStep>=4;
+    const vals=people.map(([n,d,Lx])=>{if(Lx===5&&dead)return 0;return Math.max(0,levEquity(Lx,p))});
+    const W=640,H=200,Lp=52,Rp=10,T=10,B=24,mx=20000;const X=i=>Lp+i/(LEV_PATH.length-1)*(W-Lp-Rp),Y=v=>T+(1-v/mx)*(H-T-B);
+    const g=s("svg",{class:"chart",viewBox:"0 0 "+W+" "+H,role:"img","aria-label":"Hodnota peněz tří investorů v čase"});
+    [0,5000,10000,15000,20000].forEach(v=>{g.append(s("line",{x1:Lp,x2:W-Rp,y1:Y(v),y2:Y(v),stroke:v===10000?"var(--muted)":"var(--line)","stroke-dasharray":v===10000?"4 4":""}));const t=s("text",{x:Lp-6,y:Y(v)+4,"text-anchor":"end","font-size":"11",fill:"var(--muted)","font-family":"JetBrains Mono, monospace"});t.textContent=(v/1000)+" tis.";g.append(t)});
+    LEV_PATH.forEach((_,i)=>{const t=s("text",{x:X(i),y:H-6,"text-anchor":"middle","font-size":"11",fill:i===4?"var(--down)":"var(--muted)"});t.textContent=i===0?"start":i===4?"krach":i+". m.";g.append(t)});
+    const cols=["var(--up)","var(--navy)","var(--down)"];
+    people.forEach(([n,d,Lx],k)=>{const pts=[];for(let i=0;i<=levStep;i++){const v=(Lx===5&&i>=4)?0:Math.max(0,levEquity(Lx,LEV_PATH[i]));pts.push([X(i),Y(Math.min(v,mx))])}
+      g.append(s("path",{d:pts.map((q,i)=>(i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" "),fill:"none",stroke:cols[k],"stroke-width":"3","stroke-linejoin":"round"}));
+      const l=pts[pts.length-1];g.append(s("circle",{cx:l[0],cy:l[1],r:"4",fill:cols[k]}))});
+    storyBox.replaceChildren(
+      h("div",{class:"row",style:"justify-content:space-between"},h("span",{class:"tag"},levStep===0?"Start":"Měsíc "+levStep+" z "+(LEV_PATH.length-1)),h("span",{class:"num",style:"font-weight:800"},"Cena akcie: "+p+" Kč")),
+      g,
+      h("div",{class:"people"},...people.map(([n,d,Lx],k)=>h("div",{class:"person"+(Lx===5&&dead?" dead":"")},h("span",{class:"small",style:"color:"+cols[k]+";font-weight:800"},n+" · "+d),h("b",{},kc(vals[k])),h("span",{class:cls(vals[k]-10000)+" small"},Lx===5&&dead?"−100 %, dluh 500 Kč":pct(vals[k]/10000-1,0))))),
+      h("div",{class:"story"},LEV_TXT[levStep]),
+      h("div",{class:"row"},
+        levStep<LEV_PATH.length-1?h("button",{class:"btn "+(levStep===3?"sell":"coin"),onclick:()=>{levStep++;if(levStep===LEV_PATH.length-1){store.set("levSeen",true)}drawStory()}},levStep===3?"Další měsíc (pozor…)":"Další měsíc"):h("button",{class:"btn line",onclick:()=>{levStep=0;drawStory()}},"Přehrát znovu")));
+  }
+  drawCalc();drawStory();
+  $app.replaceChildren(
+    h("div",{class:"row",style:"justify-content:space-between"},h("button",{class:"btn line",style:"min-height:40px",onclick:()=>{render()}},"← Zpět"),h("span",{class:"tag"},"Laboratoř")),
+    h("div",{class:"card"},h("span",{class:"tag"},"Co je páka"),h("h2",{},"Páka: jak přijít o všechno"),
+      h("p",{},"Páka znamená, že obchoduješ i s penězi půjčenými od brokera. S pákou 5× vložíš 10 000 Kč, broker ti přidá 40 000 Kč a ty držíš akcie za 50 000 Kč."),
+      h("p",{},"Zisk i ztráta se tím násobí. Akcie vyroste o 10 %, ty máš +50 %. Akcie spadne o 20 %, ty máš −100 %. Půjčka přitom zůstává pořád stejná a platíš z ní úrok."),
+      h("p",{},"Když ztráta sežere tvůj vklad, přijde margin call: broker chce doplnit peníze, jinak tvoje akcie prodá. Obvykle v nejhorší chvíli, na dně. Pak už nemáš nic, co by se mohlo vrátit, i kdyby akcie zase vyrostla.")),
+    h("div",{class:"card"},h("h3",{},"Vyzkoušej si to"),h("label",{style:"font-weight:800"},"Páka"),levPres,
+      h("label",{for:"chg",style:"font-weight:800;display:flex;justify-content:space-between"},"Změna ceny akcie",chgO),chgI,calcOut),
+    h("div",{class:"card"},h("span",{class:"tag"},"Modelová situace"),h("h3",{},"Jana, Petr a Tomáš"),storyBox),
+    h("div",{class:"card"},h("span",{class:"tag"},"Učivo"),h("h3",{},"Na co si dát pozor"),h("ul",{class:"lessons"},
+      h("li",{class:"warn"},"S pákou stačí malý propad, aby ti vzal všechno. Propady o 20 % i víc přitom na trhu přicházejí."),
+      h("li",{class:"warn"},"U některých obchodů můžeš dlužit i víc, než jsi vložil(a)."),
+      h("li",{class:"warn"},"Páku najdeš hlavně u CFD, forexu, obchodování na marži a některých krypto aplikací. Často se tváří nevinně, třeba jako tlačítko „×10“."),
+      h("li",{class:"warn"},"Reklamy a influenceři ukazují jen ty, kdo vydělali. Poskytovatelé CFD v EU musí uvádět, kolik procent drobných klientů prodělává, a bývá to většina. Hledej tuhle větu malým písmem."),
+      h("li",{class:"warn"},"Aplikace, které vypadají jako hra (konfety, odznaky, odpočty), tě mají přimět obchodovat víc a riskovat víc."),
+      h("li",{class:"ok"},"Bez páky ti propad vezme část peněz, ale akcie ti zůstanou a mohou se vrátit. Trpělivost a složené úročení fungují jen tomu, kdo ve hře zůstane."),
+      h("li",{class:"ok"},"Zlaté pravidlo: když nerozumíš, jak přesně můžeš o peníze přijít, nekupuj to."))),
+    h("p",{class:"foot"},"Čísla jsou zjednodušená: bez úroků z půjčky a bez dřívějšího uzavření pozice brokerem. Ve skutečnosti je to pro obchodníka s pákou ještě horší."));
+  window.scrollTo(0,0);
+}
+/* ---------- guided steps ---------- */
+const invShare=G=>{const v=portfolioValue(G);return v?(v-Math.max(0,G.cash))/v:0};
+const STEPS=[
+  {t:"Akcie je kousek firmy",x:"Když koupíš akcii, stáváš se spolumajitelem firmy. Když se firmě daří, cena akcie obvykle roste. Když ne, klesá. Začni malou částkou, třeba 5 000 Kč.",task:"Kup svou první akcii libovolné firmy (záložka Trh).",ok:G=>Object.keys(G.hold).some(id=>id!=="SVET")},
+  {t:"ETF: celý trh najednou",x:"Indexový fond (ETF) koupí za tebe stovky firem. Nemusíš vybírat vítěze, vlastníš celý trh. Je to základ, na kterém většina dlouhodobých investorů staví.",task:"Kup Svět 500 ETF.",ok:G=>!!G.hold.SVET},
+  {t:"Nedávej všechna vejce do jednoho košíku",x:"Diverzifikace znamená rozložit peníze. Když jedna firma zklame, ostatní to vyrovnají. Hlídej, aby žádná pozice nebyla moc velká.",task:"Měj aspoň 4 různá aktiva a žádné nad 40 % portfolia.",ok:G=>{const v=portfolioValue(G);const ids=Object.keys(G.hold);return ids.length>=4&&ids.every(id=>G.hold[id]*G.px[id]/v<=.4)}},
+  {t:"Než koupíš, analyzuj",x:"P/E říká, kolik platíš za korunu zisku. Dluhy ukazují, jak firma zvládne krizi. Dividenda ukazuje, kolik peněz posílá akcionářům.",task:"Odemkni analýzu libovolné firmy správnou odpovědí.",ok:G=>G.unlocked.length>0},
+  {t:"Výsledky hospodaření",x:"Čtyřikrát ročně firmy zveřejní, kolik vydělaly. Cenu nehýbe samotný zisk, ale rozdíl proti očekávání. Lepší než čekání = růst, horší = pád.",task:"Dočkej se výsledkové sezóny (leden, duben, červenec, říjen) a přečti si ji ve Zprávách.",ok:G=>G.seenResults},
+  {t:"Dividendy: peníze, které chodí samy",x:"Stabilní firmy posílají část zisku akcionářům, tady jednou za čtvrtletí. Banka, energetika a potraviny platí nejvíc. Rychle rostoucí firmy obvykle nic.",task:"Získej první dividendu (drž aspoň jednu dividendovou firmu do konce čtvrtletí).",ok:G=>G.divs>0},
+  {t:"Reinvestice: úrok z úroku",x:"Když dividendy hned použiješ na další akcie, příště dostaneš dividendu i z nich. Tak funguje složené úročení. Akumulační ETF tohle dělá automaticky.",task:"Zapni automatickou reinvestici dividend (záložka Portfolio).",ok:G=>G.drip},
+  {t:"Pravidelně, ne nárazově",x:"Investovat každý měsíc stejnou částku je jednodušší než hledat ideální chvíli. Někdy koupíš dráž, jindy levněji, a průměr vyjde rozumně.",task:"Nastav měsíční vklad (záložka Portfolio).",ok:G=>G.deposit>0},
+  {t:"Krach a trpělivost",x:"Někdy trh spadne o čtvrtinu za dva měsíce. Kdo v panice prodá, zafixuje ztrátu. Kdo drží a dál investuje, často vydělá nejvíc. Pozor: nikdo neví, kdy krach přijde.",task:"Přečkej krach bez prodeje, s většinou peněz zainvestovanou.",ok:G=>G.m>=G.plan.crash+3&&G.soldInCrash===0&&invShare(G)>.5},
+  {t:"Páka: jak přijít o všechno",x:"Obchod s půjčenými penězi násobí zisk i ztrátu. S pákou 5× tě o všechno připraví už pokles o 20 %. Tohle je učivo o tom, na co si dát pozor: projdi modelovou situaci tří kamarádů.",task:"Projdi modelovou situaci v Laboratoři páky až do konce.",ok:G=>!!store.get("levSeen",false),go:true},
+  {t:"Dlouhý dech",x:"Investování je maraton. Poplatky, panika a honba za humbukem jsou největší nepřátelé výnosu. Teď víš, jak se jim vyhnout.",task:"Dohraj všech 5 let.",ok:G=>G.m>=MONTHS},
+];
+let toastT;
+function toast(msg){document.querySelectorAll(".toast").forEach(x=>x.remove());const t=h("div",{class:"toast",role:"status"},msg);document.body.append(t);clearTimeout(toastT);toastT=setTimeout(()=>t.remove(),3800)}
+function checkSteps(){let done=[];while(G.step<STEPS.length&&STEPS[G.step].ok(G)){done.push(STEPS[G.step].t);G.step++}
+  if(done.length){save();if(G.guided)toast("Krok splněn: "+done[done.length-1]+(G.step<STEPS.length?". Další: "+STEPS[G.step].t:". Průvodce dokončen!"))}}
+function stepsView(){
+  return h("div",{style:"display:flex;flex-direction:column;gap:10px"},
+    h("div",{class:"card"},h("span",{class:"tag"},"Škola investování · krok "+Math.min(G.step+1,STEPS.length)+" z "+STEPS.length),
+      h("p",{class:"small"},"Každý krok vysvětlí jednu věc a dá ti úkol přímo ve hře. Splněný krok se odškrtne sám.")),
+    h("div",{class:"steps"},...STEPS.map((st,i)=>{const state=i<G.step?"done":i===G.step?"cur":"lock";
+      return h("div",{class:"st "+state},h("div",{class:"dot"},state==="done"?"✓":String(i+1)),
+        h("div",{},h("h3",{},st.t),state!=="lock"?h("p",{},st.x):null,state==="cur"?h("div",{class:"task"},"Úkol: "+st.task,st.go?h("button",{class:"btn coin",style:"display:block;margin-top:8px;min-height:40px",onclick:leverageView},"Otevřít Laboratoř páky"):null):state==="done"?h("div",{class:"small"},"Splněno"):h("div",{class:"small"},"Odemkne se po předchozím kroku")))})));
+}
+/* ---------- screens ---------- */
+function render(){closeSheet();if(!G)return setup();if(G.done)return finale();game()}
+function setup(){
+  const best=store.get("best",null);
+  const opts=[[0,"Jen vklad","100 000 Kč na začátku, nic dalšího."],[2000,"+2 000 Kč měsíčně","Pravidelné investování, jako z výplaty."],[5000,"+5 000 Kč měsíčně","Pro ty, kdo to myslí vážně."]];
+  const box=h("div",{class:"setup"});
+  const drawOpts=()=>box.replaceChildren(...opts.map(([v,t,d])=>h("button",{class:"opt","aria-pressed":setupDeposit===v?"true":"false",onclick:()=>{setupDeposit=v;drawOpts()}},h("b",{},t),h("span",{class:"small"},d))));
+  drawOpts();
+  const mbox=h("div",{class:"setup"});
+  const drawM=()=>mbox.replaceChildren(...[[true,"Krok za krokem","Průvodce s 10 lekcemi a úkoly. Doporučeno pro začátečníky."],[false,"Volná hra","Žádné úkoly, jen ty a trh."]].map(([v,t,d])=>h("button",{class:"opt","aria-pressed":setupGuided===v?"true":"false",onclick:()=>{setupGuided=v;drawM()}},h("b",{},t),h("span",{class:"small"},d))));
+  drawM();
+  $app.replaceChildren(
+    h("div",{class:"hero"},h("div",{class:"logo","aria-hidden":"true"},"2"),h("div",{},h("span",{class:"tag"},"Peněženka v kostce 2"),h("h1",{},"Burza"),
+      h("p",{class:"lead"},"Pět let na burze ve zrychleném čase. Kupuješ a prodáváš akcie fiktivních firem, čteš zprávy a přežiješ krach i jednu bublinu. Cíl: porazit obyčejný indexový fond, který jen drží celý trh."))),
+    h("div",{class:"card"},h("h3",{},"Jak hrát"),
+      h("ul",{class:"lessons"},
+        h("li",{},"Každým kliknutím na „Další měsíc“ se posune čas. Ceny se hýbou podle trhu, zpráv a náhody."),
+        h("li",{},"Každý obchod stojí poplatek 0,2 %, nejméně 30 Kč. Hotovost se úročí 3 % ročně."),
+        h("li",{},"Firmy hlásí výsledky každé čtvrtletí a některé vyplácejí dividendy, které můžeš nechat automaticky reinvestovat."),
+        h("li",{},"Analýzu firmy (P/E, dluhy, riziko) odemkneš správnou odpovědí na otázku."),
+        h("li",{},"Na konci se tvůj výsledek porovná s tím, kdo by vše dal do indexu Svět 500 a jen čekal."))),
+    h("div",{class:"card"},h("h3",{},"Jak chceš hrát?"),mbox),
+    h("div",{class:"card"},h("h3",{},"Kolik budeš přidávat?"),box,
+      h("button",{class:"btn coin",onclick:()=>{G=newGame(setupDeposit,setupGuided);G.qo=orderQ(QS);save();tab=setupGuided?"kroky":"trh";render();dailyQuestion()}},"Začít hrát")),
+    (()=>{const R_=rating();return h("button",{class:"card",style:"text-align:left;cursor:pointer;flex-direction:row;align-items:center",onclick:ratingSheet},ringSvg(R_.score),
+      h("div",{style:"display:flex;flex-direction:column;gap:4px"},h("span",{class:"tag"},"Investorské hodnocení"),h("b",{style:"font-family:var(--display);font-size:1.2rem"},LEVELS[R_.lv][1]),
+        h("span",{class:"small"},R_.ready?"Připraven(a) na skutečnou burzu. Klikni pro předání zkušeností.":"Splněno "+R_.reqs.filter(r=>r.ok).length+" z "+R_.reqs.length+" podmínek pro skutečnou burzu.")))})(),
+    h("button",{class:"card",style:"text-align:left;cursor:pointer",onclick:leverageView},h("span",{class:"tag"},"Laboratoř"),h("h3",{},"Páka: jak přijít o všechno"),h("p",{class:"small"},"Vysvětlení, kalkulačka a modelová situace tří kamarádů. Proč tě s pákou zničí i propad o 20 %.")),
+    best?h("p",{class:"small"},"Tvůj nejlepší výsledek proti indexu: "+pct(best)):null,
+    h("p",{class:"foot"},"Firmy, ceny i zprávy jsou smyšlené a pohyby trhu zjednodušené. Hra učí principy, nejde o investiční doporučení. Skutečné investice mohou ztratit hodnotu."));
+}
+function desk(){
+  const v=portfolioValue(G),bv=G.benchVals[G.benchVals.length-1];const invested=100000+G.deposit*G.m;
+  const diff=v/bv-1;
+  const next=h("button",{class:"btn coin",onclick:()=>advance(1)},"Další měsíc");
+  const six=h("button",{class:"btn line",onclick:()=>advance(6)},"+6 měsíců");
+  return h("div",{class:"desk"},
+    h("div",{class:"row",style:"justify-content:space-between"},h("div",{},h("span",{class:"tag"},"Měsíc "+G.m+" / "+MONTHS),h("div",{style:"font-weight:800"},monthName(G.m))),
+      h("div",{class:"row",style:"gap:6px"},h("button",{class:"btn line",style:"min-height:38px;padding:0 12px;font-size:.85rem",onclick:leverageView},"Páka"),h("button",{class:"btn line",style:"min-height:38px;padding:0 12px;font-size:.85rem",onclick:ratingSheet},"Hodnocení "+rating().score),h("button",{class:"btn line",style:"min-height:38px;padding:0 12px;font-size:.85rem",onclick:askRestart},"Nová hra"))),
+    h("div",{class:"stats"},
+      h("div",{class:"stat"},h("span",{},"Portfolio"),h("b",{},kc(v))),
+      h("div",{class:"stat"},h("span",{},"Hotovost"),h("b",{},kc(G.cash))),
+      h("div",{class:"stat"},h("span",{},"Zisk z vkladů"),h("b",{class:cls(v-invested)},pct(v/invested-1))),
+      h("div",{class:"stat"},h("span",{},"Vs. index"),h("b",{class:cls(diff)},pct(diff)))),
+    G.guided&&G.step<STEPS.length&&tab!=="kroky"?h("button",{class:"stepbar",onclick:()=>{tab="kroky";game()}},h("span",{class:"n"},(G.step+1)+"/"+STEPS.length),h("span",{class:"t"},h("b",{},STEPS[G.step].t),h("br"),STEPS[G.step].task)):null,
+    h("div",{class:"controls"},next,six),
+    h("div",{class:"tabs",role:"tablist"},...[["kroky","Kroky"],["trh","Trh"],["port","Portfolio"],["zpravy","Zprávy"]].map(([k,l])=>h("button",{class:"tab",role:"tab","aria-selected":tab===k?"true":"false",onclick:()=>{tab=k;game()}},l+(k==="zpravy"&&G.news[0]&&G.news[0].m===G.m&&G.m>0?" •":"")))));
+}
+function game(){
+  checkSteps();
+  const body=tab==="kroky"?stepsView():tab==="trh"?market():tab==="port"?portfolio():newsView();
+  $app.replaceChildren(desk(),body);
+}
+function market(){
+  const list=h("div",{class:"mk"});
+  for(const a of ASSETS){
+    const hst=G.hist[a.id],p=hst[hst.length-1],prev=hst[hst.length-2]||p;const ch=p/prev-1;
+    const held=G.hold[a.id];const P=pe(G,a);const hot=!a.etf&&P>a.pe*1.8;
+    list.append(h("div",{class:"asset"+(held?" held":"")},
+      h("div",{},h("div",{class:"nm"},a.n,a.etf?h("span",{class:"pill"},"ETF"):null,a.div?h("span",{class:"pill"},"div "+(a.div*100).toFixed(1).replace(".",",")+" %"):null,hot&&G.unlocked.includes(a.id)?h("span",{class:"pill hot"},"přehřáté"):null),
+        h("div",{class:"sec"},a.sec+(held?" · máš "+kc(held*p):""))),
+      spark(hst),
+      h("div",{class:"px"},kc(p,p<100?2:0),h("small",{class:cls(ch)},pct(ch))),
+      h("div",{class:"acts"},
+        h("button",{class:"b",onclick:()=>tradeSheet(a,"buy")},"Koupit"),
+        h("button",{class:"s",disabled:!held||null,onclick:()=>tradeSheet(a,"sell")},"Prodat"),
+        h("button",{class:"a",onclick:()=>analysis(a)},G.unlocked.includes(a.id)?"Analýza":"Analýza 🔒"))));
+  }
+  return h("div",{style:"display:flex;flex-direction:column;gap:10px"},list,
+    h("p",{class:"foot"},"Graf ukazuje posledních 12 měsíců. Procento je změna za poslední měsíc."));
+}
+function portfolio(){
+  const v=portfolioValue(G);const rows=[];const segs=[];
+  for(const a of ASSETS){const u=G.hold[a.id];if(!u)continue;const val=u*G.px[a.id];const c=G.cost[a.id]||val;
+    rows.push(h("tr",{},h("td",{},a.n),h("td",{},kc(val)),h("td",{class:cls(val-c)},pct(val/c-1)),h("td",{},pct(val/v,0).replace("+",""))));
+    segs.push([a,val])}
+  segs.push([{n:"Hotovost",col:"var(--muted)"},Math.max(0,G.cash)]);
+  const maxShare=Math.max(0,...segs.filter(x=>x[0].id).map(x=>x[1]/v));
+  const series=[{v:G.vals,c:"var(--navy)",w:3},{v:G.benchVals,c:"var(--coin)",dash:"6 4"},{v:G.saveVals,c:"var(--muted)",dash:"2 4"}];
+  const invested=100000+G.deposit*G.m;
+  const yearly=Object.keys(G.hold).reduce((t,id)=>{const a=ASSETS.find(x=>x.id===id);return t+(a.div?G.hold[id]*G.px[id]*a.div:0)},0);
+  const sw=h("button",{class:"sw",role:"switch","aria-checked":G.drip?"true":"false","aria-label":"Automaticky reinvestovat dividendy",onclick:()=>{G.drip=!G.drip;save();toast(G.drip?"Dividendy se budou automaticky reinvestovat.":"Dividendy budou chodit jako hotovost.");game()}});
+  const dep=h("div",{class:"presets"},...[0,1000,2000,5000].map(d=>h("button",{"aria-pressed":G.deposit===d?"true":"false",onclick:()=>{G.deposit=d;save();game()}},d?d.toLocaleString("cs-CZ"):"0")));
+  const divRows=Object.entries(G.divBy).sort((x,y)=>y[1]-x[1]).map(([id,amt])=>h("tr",{},h("td",{},ASSETS.find(a=>a.id===id).n),h("td",{},kc(amt))));
+  return h("div",{style:"display:flex;flex-direction:column;gap:12px"},
+    h("div",{class:"card"},h("h3",{},"Dividendy"),
+      h("div",{class:"fund"},h("div",{},h("span",{},"Dostáno celkem"),h("b",{},kc(G.divs))),h("div",{},h("span",{},"Z toho reinvestováno"),h("b",{},kc(G.reinvested))),
+        h("div",{},h("span",{},"Odhad za rok"),h("b",{},kc(yearly))),h("div",{},h("span",{},"Měsíčně v průměru"),h("b",{},kc(yearly/12)))),
+      h("div",{class:"toggle"},h("span",{},"Automaticky reinvestovat dividendy",h("br"),h("span",{class:"small",style:"font-weight:400"},"Dividenda se hned použije na nákup dalších akcií té samé firmy, bez poplatku.")),sw),
+      divRows.length?h("div",{class:"tablewrap"},h("table",{},h("thead",{},h("tr",{},h("th",{},"Firma"),h("th",{},"Vyplaceno"))),h("tbody",{},...divRows))):h("p",{class:"small"},"Dividendy se vyplácejí v březnu, červnu, září a prosinci. Platí je Klas, Voltik, Horizont, StavMont a MedVia.")),
+    h("div",{class:"card"},h("h3",{},"Měsíční vklad"),h("p",{class:"small"},"Kolik každý měsíc přidáš do hotovosti. Index ve srovnání dostává stejnou částku."),dep),
+    h("div",{class:"card"},h("h3",{},"Ty vs. index vs. spořicí účet"),lineChart(series),
+      h("div",{class:"legend"},h("span",{},h("i",{style:"background:var(--navy)"}),"Tvoje portfolio "+kc(v)),h("span",{},h("i",{style:"background:var(--coin)"}),"Jen index "+kc(G.benchVals[G.benchVals.length-1])),h("span",{},h("i",{style:"background:var(--muted)"}),"Spořicí účet "+kc(G.saveVals[G.saveVals.length-1]))),
+      h("p",{class:"small"},"Vloženo celkem "+kc(invested)+". Poplatky zatím "+kc(G.fees)+", dividendy "+kc(G.divs)+", obchodů "+G.trades+".")),
+    h("div",{class:"card"},h("h3",{},"Rozložení"),
+      h("div",{class:"alloc"},...segs.map(([a,val])=>h("i",{style:"width:"+(val/v*100)+"%;background:"+a.col,title:a.n}))),
+      h("div",{class:"legend"},...segs.map(([a,val])=>h("span",{},h("i",{style:"background:"+a.col}),a.n+" "+Math.round(val/v*100)+" %"))),
+      maxShare>.4?h("p",{class:"explain"},"Víc než 40 % máš v jedné firmě. Když se jí nedaří, dostane to celé portfolio."):null,
+      rows.length?h("div",{class:"tablewrap"},h("table",{},h("thead",{},h("tr",{},h("th",{},"Akcie"),h("th",{},"Hodnota"),h("th",{},"Zisk"),h("th",{},"Podíl"))),h("tbody",{},...rows))):h("p",{class:"small"},"Zatím nic nevlastníš. Hotovost se úročí, ale index mezitím může růst.")));
+}
+let newsFilter="all";
+function newsView(){
+  const items=G.news.filter(n=>newsFilter==="all"||n.k===newsFilter);
+  if(items.some(n=>n.k==="res")&&(newsFilter==="all"||newsFilter==="res")&&!G.seenResults){G.seenResults=true;save();setTimeout(()=>{checkSteps()},50)}
+  const chips=h("div",{class:"chips"},...[["all","Vše"],["res","Výsledky"],["div","Dividendy"]].map(([k,l])=>h("button",{class:"chip","aria-pressed":newsFilter===k?"true":"false",onclick:()=>{newsFilter=k;game()}},l)));
+  const body=n=>{
+    if(n.k==="res"&&n.rows)return [h("div",{},n.t),h("div",{class:"tablewrap"},h("table",{},h("thead",{},h("tr",{},h("th",{},"Firma"),h("th",{},"Zisk/akcii"),h("th",{},"Čekalo se"),h("th",{},"Tržby r/r"))),
+      h("tbody",{},...n.rows.map(r=>h("tr",{},h("td",{},r.n,r.hype?h("span",{class:"pill hot"},"humbuk"):null,r.why?h("div",{class:"small",style:"font-weight:400"},r.why):null),h("td",{class:cls(r.sur)},kc(r.act,2)),h("td",{},kc(r.exp,2)),h("td",{class:cls(r.rev)},pct(r.rev))))))),
+      h("p",{class:"small"},"Zelená = lepší, než trh čekal, cena obvykle roste. Červená = horší, cena obvykle klesá."+(n.rows.some(r=>r.hype)?" U firmy v humbuku trh slabé výsledky ignoruje. To bývá varovný signál.":""))];
+    if(n.k==="div"&&n.list)return [h("div",{},n.t),h("div",{class:"small"},n.list.map(x=>x.n+" "+kc(x.amt)).join(" · "))];
+    return [h("div",{},n.t)];
+  };
+  return h("div",{style:"display:flex;flex-direction:column;gap:10px"},chips,
+    items.length?h("div",{class:"news"},...items.map(n=>h("div",{class:"ni "+(n.k||"")},h("div",{class:"when"},n.m===0?"Start":"Měsíc "+n.m+" · "+monthName(n.m)),...body(n)))):h("p",{class:"small"},newsFilter==="res"?"První výsledková sezóna přijde v lednu (měsíc 1).":"Zatím žádné dividendy. Vyplácejí se v březnu, červnu, září a prosinci."));
+}
+/* ---------- actions ---------- */
+function advance(k){
+  if(busy)return;
+  for(let i=0;i<k&&!G.done;i++){stepMonth(G);if(G.news[0]&&G.news[0].m===G.m&&k>1&&/KRACH|Bublina praskla|zasedá|varují|čeká rozhodnutí|bublinou/.test(G.news.filter(n=>n.m===G.m).map(n=>n.t).join(" ")))break}
+  save();
+  if(G.done)return finale();
+  const fresh=G.news.filter(n=>n.m===G.m);
+  game();
+  if(fresh.some(n=>n.k==="neg"&&/KRACH/.test(n.t)))openSheet(h("span",{class:"tag"},"Breaking news"),h("h2",{},"Krach na burze"),h("p",{},fresh.map(n=>n.t).join(" ")),
+    h("p",{class:"explain"},"Teď se ukáže, jak reaguješ pod tlakem. Prodáš, budeš držet, nebo nakoupíš levně? Nikdo neví, kde je dno."),h("button",{class:"btn",onclick:closeSheet},"Rozumím"));
+}
+function askRestart(){openSheet(h("h2",{},"Začít novou hru?"),h("p",{},"Rozehraná hra se smaže."),h("div",{class:"row"},h("button",{class:"btn",onclick:()=>{G=null;store.set("game",null);render()}},"Ano"),h("button",{class:"btn line",onclick:closeSheet},"Ne")))}
+function tradeSheet(a,mode){
+  const p=G.px[a.id];let val=0,frac=0;
+  const calc=h("div",{class:"calc"});const go=h("button",{class:"btn "+(mode==="buy"?"buy":"sell")});
+  const inp=h("input",{type:"number",id:"amt",min:0,step:500,inputmode:"numeric",placeholder:"Částka v Kč"});
+  const pres=h("div",{class:"presets"});
+  function upd(){
+    if(mode==="buy"){val=Math.max(0,+inp.value||0);const f=val?fee(val):0;const ok=val>0&&val+f<=G.cash+1e-6;
+      calc.replaceChildren(h("span",{},"Koupíš kusů"),h("b",{},(val/p).toLocaleString("cs-CZ",{maximumFractionDigits:3})),h("span",{},"Poplatek"),h("b",{},kc(f)),h("span",{},"Celkem z hotovosti"),h("b",{},kc(val+f)),
+        f/(val||1)>.01&&val>0?h("span",{style:"grid-column:1/-1;color:var(--down)"},"Poplatek je víc než 1 % obchodu. Malé nákupy se kvůli minimálnímu poplatku nevyplácí."):null);
+      go.disabled=!ok;go.textContent=ok?"Koupit za "+kc(val):val>0?"Nemáš dost hotovosti":"Zadej částku";
+    }else{const u=G.hold[a.id]||0;const amt=u*frac*p;const f=amt?Math.min(fee(amt),amt):0;
+      calc.replaceChildren(h("span",{},"Prodáš"),h("b",{},Math.round(frac*100)+" % pozice"),h("span",{},"Poplatek"),h("b",{},kc(f)),h("span",{},"Dostaneš"),h("b",{},kc(amt-f)));
+      go.disabled=!(frac>0);go.textContent=frac>0?"Prodat za "+kc(amt-f):"Vyber, kolik prodat";}
+  }
+  if(mode==="buy"){
+    const maxBuy=Math.max(0,Math.floor((G.cash-Math.max(FEE_MIN,G.cash*FEE_PCT))/(1+FEE_PCT)));
+    const opts=[[5000,"5 000"],[10000,"10 000"],[25000,"25 000"],[maxBuy,"Vše"]].filter(x=>x[0]>0);
+    pres.append(...opts.map(([v,l])=>h("button",{"aria-pressed":"false",onclick:e=>{inp.value=Math.min(v,maxBuy);pres.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===e.currentTarget?"true":"false"));upd()}},l)));
+    inp.oninput=upd;
+    go.onclick=()=>{if(buy(G,a.id,val)){save();closeSheet();game()}};
+    openSheet(h("span",{class:"tag"},"Nákup · hotovost "+kc(G.cash)),h("h2",{},a.n),h("p",{class:"small"},"Cena za kus "+kc(p,2)+". Můžeš koupit i část akcie."),pres,h("label",{for:"amt",style:"font-weight:800"},"Částka"),inp,calc,go,h("button",{class:"btn line",onclick:closeSheet},"Zrušit"));
+  }else{
+    pres.append(...[[.25,"25 %"],[.5,"50 %"],[1,"Vše"]].map(([f,l])=>h("button",{"aria-pressed":"false",onclick:e=>{frac=f;pres.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b===e.currentTarget?"true":"false"));upd()}},l)));
+    go.onclick=()=>{const wasCrash=G.m>=G.plan.crash&&G.m<=G.plan.crash+2;if(sell(G,a.id,frac)){save();closeSheet();game();
+      if(wasCrash)openSheet(h("h2",{},"Prodáno v krizi"),h("p",{},"Prodat během propadu znamená zafixovat ztrátu. Někdy je to rozumné (potřebuješ peníze, firma je opravdu v potížích), ale často to je strach. Uvidíme, jak se trh zachová dál."),h("button",{class:"btn",onclick:closeSheet},"OK"))}};
+    const u=G.hold[a.id]||0;const val0=u*p;const c=G.cost[a.id]||val0;
+    openSheet(h("span",{class:"tag"},"Prodej"),h("h2",{},a.n),h("p",{},"Pozice "+kc(val0)+" ",h("span",{class:cls(val0-c)},"("+pct(val0/c-1)+")")),pres,calc,go,h("button",{class:"btn line",onclick:closeSheet},"Zrušit"));
+  }
+  upd();
+}
+function nextQ(){if(!G.qo||G.qi>=G.qo.length||G.qo.length!==QS.length||QS[G.qo[G.qi]]===undefined){G.qo=orderQ(QS);G.qi=0}const q=QS[G.qo[G.qi++]];const idx=shuffle(q.o.map((_,k)=>k));return{...q,o:idx.map(k=>q.o[k]),a:idx.indexOf(q.a)}}
+function analysis(a){
+  if(G.unlocked.includes(a.id))return showFund(a);
+  const q=nextQ();const fb=h("div",{style:"display:flex;flex-direction:column;gap:10px"});
+  const btns=q.o.map((t,k)=>h("button",{class:"choice",onclick:()=>{
+    btns.forEach((b,j)=>{b.disabled=true;if(j===q.a)b.classList.add("right");else if(j===k)b.classList.add("wrong")});
+    const ok=k===q.a;if(ok){G.ok++;G.unlocked.push(a.id)}else G.bad++;save();
+    fb.replaceChildren(h("div",{class:"explain"},h("b",{},ok?"Správně. ":"Vedle. "),q.e),
+      ok?h("button",{class:"btn",onclick:()=>showFund(a)},"Zobrazit analýzu"):h("button",{class:"btn line",onclick:closeSheet},"Zkusím to později"));
+    fb.scrollIntoView({block:"nearest"});
+  }},t));
+  openSheet(h("span",{class:"tag"},"Analýza je zamčená"),h("h2",{},a.n),h("p",{class:"small"},"Správná odpověď odemkne analýzu této firmy natrvalo."),h("h3",{},q.q),h("div",{class:"choices"},...btns),fb);
+}
+function showFund(a){
+  const P=pe(G,a);const hst=G.hist[a.id];const y=hst.length>12?hst[hst.length-1]/hst[hst.length-13]-1:hst[hst.length-1]/hst[0]-1;
+  const verdict=a.etf?"Celý trh v jednom. Nejnudnější a pro většinu lidí nejrozumnější volba.":P>a.pe*1.8?"Cena utekla daleko před zisky. Vypadá to na přehřátí, riziko propadu je vysoké.":P<a.pe*.75?"Akcie je levná vůči ziskům. Může to být příležitost, nebo trh tuší problém.":"Cena odpovídá ziskům a výhledu.";
+  openSheet(h("span",{class:"tag"},"Analýza"),h("h2",{},a.n),h("p",{class:"small"},a.sec),
+    h("div",{class:"fund"},
+      h("div",{},h("span",{},"P/E"),h("b",{class:!a.etf&&P>a.pe*1.8?"down":""},P.toFixed(1))),
+      h("div",{},h("span",{},"Dividenda"),h("b",{},a.div?(a.div*100).toFixed(1).replace(".",",")+" % ročně":"žádná")),
+      h("div",{},h("span",{},"Za 12 měsíců"),h("b",{class:cls(y)},pct(y))),
+      h("div",{},h("span",{},"Zadlužení"),h("b",{},a.debt)),
+      h("div",{},h("span",{},"Růst"),h("b",{},a.growth)),
+      h("div",{},h("span",{},"Riziko"),h("b",{},a.risk))),
+    G.results[a.id]?h("p",{class:"small"},"Poslední výsledky (měsíc "+G.results[a.id].m+(G.results[a.id].why?", "+G.results[a.id].why:"")+"): zisk na akcii "+kc(G.results[a.id].act,2)+", trh čekal "+kc(G.results[a.id].exp,2)+" ("+pct(G.results[a.id].sur)+")."):null,
+    h("p",{class:"explain"},verdict),
+    a.rate?h("p",{class:"small"},a.rate>0?"Vyšší úrokové sazby bance obvykle pomáhají.":"Vyšší úrokové sazby firmě se stavbami a dluhy škodí."):null,
+    h("button",{class:"btn",onclick:closeSheet},"Zavřít"));
+}
+/* ---------- end ---------- */
+function finale(){
+  const v=portfolioValue(G),bv=G.benchVals[G.benchVals.length-1],sv=G.saveVals[G.saveVals.length-1];const invested=100000+G.deposit*MONTHS;
+  const diff=v/bv-1;
+  if(!G.recorded){const H=store.get("history",[]);const maxShare=Math.max(0,...Object.keys(G.hold).map(id=>G.hold[id]*G.px[id]/v));
+    checkSteps();H.push({diff,feeRatio:G.fees/v,panic:G.soldInCrash>0,maxShare,ok:G.ok,bad:G.bad,steps:G.step,bubble:G.boughtBubbleTop>0});store.set("history",H.slice(-20));G.recorded=true;save()}
+  const best=store.get("best",null);const rec=best===null||diff>best;if(rec)store.set("best",diff);
+  const L=[];
+  L.push(diff>=0?["ok","Porazil(a) jsi index o "+pct(diff).replace("+","")+". To se dlouhodobě nedaří ani většině profesionálních fondů. Bylo to umem, nebo štěstím? Zkus hrát znovu."]:["warn","Index tě porazil o "+pct(-diff).replace("+","")+". Většina aktivních investorů na tom je dlouhodobě stejně. Proto tolik lidí volí indexové ETF."]);
+  L.push(G.fees>v*.01?["warn","Na poplatcích jsi zaplatil(a) "+kc(G.fees)+" za "+G.trades+" obchodů. Časté obchodování výnos ukusuje."]:["ok","Poplatky jen "+kc(G.fees)+" za "+G.trades+" obchodů. Málo obchodů = málo poplatků."]);
+  if(G.soldInCrash>0)L.push(["warn","Během krachu jsi prodal(a) za "+kc(G.soldInCrash)+". Trh se pak vzpamatoval. Prodej v panice je jedna z nejdražších chyb."]);
+  else L.push(["ok","Krach jsi ustál(a) bez paniky. Přesně tohle odlišuje úspěšné dlouhodobé investory."]);
+  if(G.boughtBubbleTop)L.push(["warn","Kupoval(a) jsi Nebulu AI na vrcholu bubliny. Humbuk na sítích není analýza."]);
+  if(v-G.cash<v*.3)L.push(["warn","Většinu času jsi držel(a) hlavně hotovost. Spořicí účet je bezpečný, ale dlouhodobě obvykle prohrává s akciemi."]);
+  if(G.bonus)L.push(["ok","Za "+G.dailyOk+" správných denních otázek jsi získal(a) "+kc(G.bonus)+"."]);
+  if(G.divs>0)L.push(["ok","Dividendy ti přinesly "+kc(G.divs)+(G.reinvested?", z toho "+kc(G.reinvested)+" se automaticky reinvestovalo a vydělávalo dál.":". Zkus příště zapnout reinvestici, ať dividendy vydělávají další dividendy.")]);
+  else L.push(["warn","Nedostal(a) jsi žádné dividendy. Stabilní dividendové firmy můžou být příjemný pravidelný příjem."]);
+  checkSteps();if(G.guided)L.push([G.step>=STEPS.length?"ok":"","Průvodce: splněno "+G.step+" z "+STEPS.length+" kroků."]);
+  L.push(["", "Správně zodpovězeno "+G.ok+" z "+(G.ok+G.bad)+" otázek, odemčeno "+G.unlocked.length+" analýz z "+ASSETS.length+"."]);
+  $app.replaceChildren(
+    h("div",{class:"card"},h("span",{class:"tag"},"Konec 5. roku"),h("h2",{},diff>=0?"Porazil(a) jsi trh!":"Trh vyhrál, ale tys získal(a) zkušenost"),
+      h("div",{class:"big num"},kc(v)),
+      h("p",{},"Vloženo "+kc(invested)+". Jen index by měl "+kc(bv)+", spořicí účet "+kc(sv)+"."),
+      rec?h("p",{style:"font-weight:800;color:var(--up)"},"Nový osobní rekord proti indexu!"):null,
+      lineChart([{v:G.vals,c:"var(--navy)",w:3},{v:G.benchVals,c:"var(--coin)",dash:"6 4"},{v:G.saveVals,c:"var(--muted)",dash:"2 4"}]),
+      h("div",{class:"legend"},h("span",{},h("i",{style:"background:var(--navy)"}),"Ty"),h("span",{},h("i",{style:"background:var(--coin)"}),"Index"),h("span",{},h("i",{style:"background:var(--muted)"}),"Spořicí účet"))),
+    h("div",{class:"card"},h("h3",{},"Co se ukázalo"),h("ul",{class:"lessons"},...L.map(([c,t])=>h("li",{class:c},t)))),
+    h("div",{class:"row"},h("button",{class:"btn coin",onclick:()=>{G=null;store.set("game",null);render()}},"Hrát znovu"),h("button",{class:"btn line",onclick:ratingSheet},"Moje hodnocení")),
+    h("p",{class:"foot"},"Každá hra má jinak načasovaný krach, bublinu i zprávy. Firmy a čísla jsou smyšlené, nejde o investiční doporučení."));
+  window.scrollTo(0,0);
+}
+let sheetEl=null;
+function openSheet(...kids){closeSheet();const sh=h("div",{class:"sheet",role:"dialog","aria-modal":"true"},...kids);sheetEl=h("div",{class:"sheet-bg",onclick:e=>{if(e.target===sheetEl)closeSheet()}},sh);document.body.append(sheetEl)}
+function closeSheet(){if(sheetEl){sheetEl.remove();sheetEl=null}}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+/* ---------- daily question: once per day, +1 000 Kč for a correct answer ---------- */
+function todayKey(){const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+function dailyQuestion(){
+  if(!G||G.done||store.get("lastDaily","")===todayKey())return;
+  store.set("lastDaily",todayKey());
+  const q=nextQ();save();const fb=h("div",{style:"display:flex;flex-direction:column;gap:10px"});
+  const btns=q.o.map((t,k)=>h("button",{class:"choice",onclick:()=>{
+    btns.forEach((b,j)=>{b.disabled=true;if(j===q.a)b.classList.add("right");else if(j===k)b.classList.add("wrong")});
+    const ok=k===q.a;
+    if(ok){G.cash+=1000;G.bonus=(G.bonus||0)+1000;G.dailyOk=(G.dailyOk||0)+1;G.bench.units+=1000/G.px.SVET;G.bench.save+=1000;G.ok++;
+      G.news.unshift({m:G.m,t:"Denní otázka: správná odpověď, připsáno 1 000 Kč do hotovosti.",k:"edu"})}else G.bad++;
+    save();
+    fb.replaceChildren(h("div",{class:"explain"},h("b",{},ok?"Správně! +1 000 Kč do hotovosti. ":"Vedle, dnes bez bonusu. "),q.e),
+      h("button",{class:"btn",onclick:()=>{closeSheet();game()}},ok?"Investovat to":"Pokračovat"));
+    fb.scrollIntoView({block:"nearest"});
+  }},t));
+  openSheet(h("span",{class:"tag"},"Denní otázka · odměna 1 000 Kč"),h("h2",{},"Vítej zpátky"),
+    h("p",{class:"small"},"Jednou denně dostaneš otázku z financí. Za správnou odpověď ti připíšu 1 000 Kč (stejnou částku dostane i srovnávací index, aby souboj zůstal férový)."),
+    h("h3",{},q.q),h("div",{class:"choices"},...btns),fb);
+}
+render();
+dailyQuestion();
+</script>
+
+</body></html>
